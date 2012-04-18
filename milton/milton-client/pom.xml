@@ -20,6 +20,20 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>endrick-cache</artifactId>
             <version>1.7.8</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>kryo</artifactId>
+                    <groupId>com.esotericsoftware</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>minilog</artifactId>
+                    <groupId>com.esotericsoftware</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>reflectasm</artifactId>
+                    <groupId>com.esotericsoftware</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>        
 
         <dependency>
@@ -34,15 +48,15 @@
         </dependency>
         <dependency>
             <scope>test</scope>
-            <groupId>easymock</groupId>
+            <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
-            <version>2.4</version>
+            <version>${easy-mock.version}</version>
         </dependency>
         <dependency>
             <scope>test</scope>
-            <groupId>easymock</groupId>
+            <groupId>org.easymock</groupId>
             <artifactId>easymockclassextension</artifactId>
-            <version>2.4</version>
+            <version>${easy-mock.version}</version>
         </dependency>
         <dependency>
             <scope>test</scope>

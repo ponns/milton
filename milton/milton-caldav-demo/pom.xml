@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.ettrema</groupId>
         <artifactId>milton</artifactId>
-        <version>1.7.1-SNAPSHOT</version>
+        <version>1.7.3-SNAPSHOT</version>
     </parent>
     <groupId>com.ettrema</groupId>
     <artifactId>milton-caldav-demo</artifactId>
@@ -105,12 +105,12 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>berry-server</artifactId>
-            <version>1.4</version>
+            <version>1.5</version>
         </dependency>
         <dependency>
             <groupId>com.ettrema</groupId>
             <artifactId>geroa-server</artifactId>
-            <version>1.2</version>
+            <version>1.5</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

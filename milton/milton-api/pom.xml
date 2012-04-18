@@ -35,14 +35,14 @@
 		<dependency>
 			<groupId>org.easymock</groupId>
 			<artifactId>easymock</artifactId>
-			<version>3.1</version>
+			<version>${easy-mock.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<scope>test</scope>
 			<groupId>org.easymock</groupId>
 			<artifactId>easymockclassextension</artifactId>
-			<version>3.1</version>
+			<version>${easy-mock.version}</version>
 		</dependency>
 		<dependency>
 			<scope>test</scope>
