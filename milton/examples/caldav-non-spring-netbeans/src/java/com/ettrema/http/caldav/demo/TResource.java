@@ -25,171 +25,171 @@ import java.util.Map;
 import java.util.UUID;
 
 public abstract class TResource extends AbstractResource implements GetableResource, PropFindableResource, DeletableResource, MoveableResource,
-    CopyableResource, DigestResource, AccessControlledResource, LockableResource {
+        CopyableResource, DigestResource, AccessControlledResource, LockableResource {
 
-    private static org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger( TResource.class );
+    private static org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(TResource.class);
     private LockToken currentLock;
 
-    public TResource( TFolderResource parent, String name ) {
-        super( parent, name );
+    public TResource(TFolderResource parent, String name) {
+        super(parent, name);
     }
 
-    protected abstract Object clone( TFolderResource newParent );
+    protected abstract Object clone(TFolderResource newParent);
 
-	@Override
+    @Override
     public String getPrincipalURL() {
-		TCalDavPrincipal user = getUser();
-		if( user == null ) {
-			return null;
-		} else {
-			return user.getHref();
-		}
+        TCalDavPrincipal user = getUser();
+        if (user == null) {
+            return null;
+        } else {
+            return user.getHref();
+        }
     }
 
-	@Override
+    @Override
     public HrefList getPrincipalCollectionHrefs() {
         return TResourceFactory.getPrincipalCollectionHrefs();
     }
 
     public String getHref() {
-        if( parent == null ) {
+        if (parent == null) {
             return "";
         } else {
             String s = parent.getHref();
-            if( !s.endsWith( "/" ) ) {
+            if (!s.endsWith("/")) {
                 s = s + "/";
             }
             s = s + name;
-            if( this instanceof CollectionResource ) {
+            if (this instanceof CollectionResource) {
                 s = s + "/";
             }
             return s;
         }
     }
 
-	@Override
+    @Override
     public Long getContentLength() {
         return null;
     }
 
-	@Override
-    public Long getMaxAgeSeconds( Auth auth ) {
+    @Override
+    public Long getMaxAgeSeconds(Auth auth) {
         return (long) 10;
     }
 
-	@Override
-    public void moveTo( CollectionResource rDest, String name ) {
-        log.debug( "moving.." );
+    @Override
+    public void moveTo(CollectionResource rDest, String name) {
+        log.debug("moving..");
         TFolderResource d = (TFolderResource) rDest;
-        this.parent.children.remove( this );
+        this.parent.children.remove(this);
         this.parent = d;
-        this.parent.children.add( this );
+        this.parent.children.add(this);
         this.name = name;
     }
 
-	@Override
+    @Override
     public Date getCreateDate() {
         return createdDate;
     }
 
-	@Override
+    @Override
     public void delete() {
-        if( this.parent == null ) {
-            throw new RuntimeException( "attempt to delete root" );
+        if (this.parent == null) {
+            throw new RuntimeException("attempt to delete root");
         }
 
-        if( this.parent.children == null ) {
-            throw new NullPointerException( "children is null" );
+        if (this.parent.children == null) {
+            throw new NullPointerException("children is null");
         }
-        this.parent.children.remove( this );
+        this.parent.children.remove(this);
     }
 
-	@Override
-    public void copyTo( CollectionResource toCollection, String name ) {
+    @Override
+    public void copyTo(CollectionResource toCollection, String name) {
         TResource rClone;
-        rClone = (TResource) this.clone( (TFolderResource) toCollection );
+        rClone = (TResource) this.clone((TFolderResource) toCollection);
         rClone.name = name;
     }
 
-    public int compareTo( Resource o ) {
-        if( o instanceof TResource ) {
+    public int compareTo(Resource o) {
+        if (o instanceof TResource) {
             TResource res = (TResource) o;
-            return this.getName().compareTo( res.getName() );
+            return this.getName().compareTo(res.getName());
         } else {
             return -1;
         }
     }
 
     /**
-     * This is required for the PropPatchableResource interface, but should
-     * not be implemented.
+     * This is required for the PropPatchableResource interface, but should not
+     * be implemented.
      *
-     * Implement CustomPropertyResource or MultiNamespaceCustomPropertyResource instead
+     * Implement CustomPropertyResource or MultiNamespaceCustomPropertyResource
+     * instead
      *
      * @param fields
      */
-    public void setProperties( Fields fields ) {
+    public void setProperties(Fields fields) {
     }
 
-    protected void print( PrintWriter printer, String s ) {
-        printer.print( s );
+    protected void print(PrintWriter printer, String s) {
+        printer.print(s);
     }
 
-	@Override
-    public final LockResult lock( LockTimeout lockTimeout, LockInfo lockInfo ) {
-        log.trace( "Lock : " + lockTimeout + " info : " + lockInfo + " on resource : " + getName() + " in : " + parent );
+    @Override
+    public final LockResult lock(LockTimeout lockTimeout, LockInfo lockInfo) {
+        log.trace("Lock : " + lockTimeout + " info : " + lockInfo + " on resource : " + getName() + " in : " + parent);
         LockToken token = new LockToken();
         token.info = lockInfo;
-        token.timeout = LockTimeout.parseTimeout( "30" );
+        token.timeout = LockTimeout.parseTimeout("30");
         token.tokenId = UUID.randomUUID().toString();
         currentLock = token;
-        return LockResult.success( token );
+        return LockResult.success(token);
     }
 
-	@Override
-    public final LockResult refreshLock( String tokenId ) {
-        log.trace( "RefreshLock : " + tokenId + " on resource : " + getName() + " in : " + parent );
+    @Override
+    public final LockResult refreshLock(String tokenId) {
+        log.trace("RefreshLock : " + tokenId + " on resource : " + getName() + " in : " + parent);
         //throw new UnsupportedOperationException("Not supported yet.");
         LockToken token = new LockToken();
         token.info = null;
-        token.timeout = LockTimeout.parseTimeout( "30" );
+        token.timeout = LockTimeout.parseTimeout("30");
         token.tokenId = currentLock.tokenId;
         currentLock = token;
-        return LockResult.success( token );
+        return LockResult.success(token);
     }
 
-	@Override
-    public void unlock( String arg0 ) {
-        log.trace( "UnLock : " + arg0 + " on resource : " + getName() + " in : " + parent );
+    @Override
+    public void unlock(String arg0) {
+        log.trace("UnLock : " + arg0 + " on resource : " + getName() + " in : " + parent);
         currentLock = null;
         //throw new UnsupportedOperationException("Not supported yet.");
     }
 
-	@Override
+    @Override
     public final LockToken getCurrentLock() {
-        log.trace( "GetCurrentLock" );
+        log.trace("GetCurrentLock");
         return currentLock;
     }
 
-	@Override
+    @Override
     public boolean isDigestAllowed() {
         return true;
     }
 
-	@Override
+    @Override
     public Map<Principal, List<Priviledge>> getAccessControlList() {
-      throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
-	@Override
+    @Override
     public List<Priviledge> getPriviledges(Auth auth) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-	@Override
-    public void setPriviledges(Principal principal, boolean isGrantOrDeny, List<Priviledge> privs) {
-      throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 
+    @Override
+    public void setAccessControlList(Map<Principal, List<Priviledge>> map) {
+
+    }
 }

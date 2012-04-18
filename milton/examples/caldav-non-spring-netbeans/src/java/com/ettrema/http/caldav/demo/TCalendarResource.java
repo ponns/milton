@@ -24,6 +24,8 @@ public class TCalendarResource extends TFolderResource implements CalendarResour
 
     private static final Logger log = LoggerFactory.getLogger(TCalendarResource.class);
 
+    private String color = "#2952A3";
+    
     public TCalendarResource(TFolderResource parent, String name) {
         super(parent, name);
     }
@@ -35,26 +37,36 @@ public class TCalendarResource extends TFolderResource implements CalendarResour
 
     @Override
     public Resource createNew(String newName, InputStream inputStream, Long length, String contentType) throws IOException {
-        log.debug("createNew");
-        //if (contentType.startsWith("text/calendar")) {
+        log.debug("createNew: " + contentType);
+//        if (contentType.startsWith("text/calendar")) {
             TEvent e = new TEvent(this, newName);
             log.debug("created tevent: " + e.name);
-            ICalFormatter formatter = new ICalFormatter();
             ByteArrayOutputStream bout = new ByteArrayOutputStream();
             StreamUtils.readTo(inputStream, bout);
             bout.close();
             String data = bout.toString();
             e.setiCalData(data);
             return e;
-    //    } else {
-       //     throw new RuntimeException("eek Not a calendar, is a: " + contentType);
-            //log.debug( "creating a normal resource");
-            //return super.createNew( newName, inputStream, length, contentType );
-  //      }
+//        } else {
+//            throw new RuntimeException("eek");
+//            //log.debug( "creating a normal resource");
+//            //return super.createNew( newName, inputStream, length, contentType );
+//        }
     }
 
+	@Override
     public String getCalendarDescription() {
         return "A test calendar";
+    }
+
+    @Override
+    public String getColor() {
+        return color;
+    }
+
+    @Override
+    public void setColor(String s) {
+        this.color = s;
     }
 
 }
