@@ -18,20 +18,11 @@
             <artifactId>milton-api</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!--
-
-It looks like this is in the maven repo, but i couldnt download it and had
-to install manually. Download from - http://sourceforge.net/project/showfiles.php?group_id=171425&package_id=195856&release_id=645913
-
-to download file: json-lib-2.2.3-jdk15.jar
-
-might be something to do with the -jdk15 after the verson number
-
-        -->
         <dependency>
             <groupId>net.sf.json-lib</groupId>
             <artifactId>json-lib</artifactId>
-            <version>2.2.3</version>
+            <version>2.4</version>
+            <classifier>jdk15</classifier>
         </dependency>
         <dependency>
             <groupId>org.easymock</groupId>
