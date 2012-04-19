@@ -18,9 +18,12 @@ import org.slf4j.LoggerFactory;
 public class FsDirectoryResource extends FsResource implements MakeCollectionableResource, PutableResource, CopyableResource, DeletableResource, MoveableResource, PropFindableResource, LockingCollectionResource, GetableResource {
 
     private static final Logger log = LoggerFactory.getLogger(FsDirectoryResource.class);
+    
+    private final FileContentService contentService;
 
-    public FsDirectoryResource(String host, FileSystemResourceFactory factory, File dir) {
+    public FsDirectoryResource(String host, FileSystemResourceFactory factory, File dir, FileContentService contentService) {
         super(host, factory, dir);
+        this.contentService = contentService;
         if (!dir.exists()) {
             throw new IllegalArgumentException("Directory does not exist: " + dir.getAbsolutePath());
         }
@@ -36,7 +39,7 @@ public class FsDirectoryResource extends FsResource implements MakeCollectionabl
         if (!ok) {
             throw new RuntimeException("Failed to create: " + fnew.getAbsolutePath());
         }
-        return new FsDirectoryResource(host, factory, fnew);
+        return new FsDirectoryResource(host, factory, fnew, contentService);
     }
 
     @Override
@@ -106,7 +109,7 @@ public class FsDirectoryResource extends FsResource implements MakeCollectionabl
     public LockToken createAndLock(String name, LockTimeout timeout, LockInfo lockInfo) throws NotAuthorizedException {
         File dest = new File(this.getFile(), name);
         createEmptyFile(dest);
-        FsFileResource newRes = new FsFileResource(host, factory, dest);
+        FsFileResource newRes = new FsFileResource(host, factory, dest, contentService);
         LockResult res = newRes.lock(timeout, lockInfo);
         return res.getLockToken();
     }
