@@ -104,6 +104,8 @@ public class HttpManager {
 		this.responseHandler = webdavResponseHandler;
 		this.handlers = new ProtocolHandlers(webdavResponseHandler, authenticationService);
 
+		entityTransport = new DefaultEntityTransport(); // default implementation, can be overridden with setter
+		
 		initHandlers();
 	}
 
@@ -115,6 +117,8 @@ public class HttpManager {
 		this.responseHandler = responseHandler;
 		this.handlers = new ProtocolHandlers(responseHandler, authenticationService);
 
+		entityTransport = new DefaultEntityTransport(); // default implementation, can be overridden with setter
+		
 		initHandlers();
 	}
 
@@ -126,6 +130,8 @@ public class HttpManager {
 		this.responseHandler = responseHandler;
 		this.handlers = handlers;
 
+		entityTransport = new DefaultEntityTransport(); // default implementation, can be overridden with setter
+		
 		initHandlers();
 	}
 
