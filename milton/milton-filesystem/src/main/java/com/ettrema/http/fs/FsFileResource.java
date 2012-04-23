@@ -10,8 +10,8 @@ import com.bradmcevoy.http.PropFindableResource;
 import com.bradmcevoy.http.PropPatchableResource;
 import com.bradmcevoy.http.Range;
 import com.bradmcevoy.http.Request;
+import com.bradmcevoy.http.entity.PartialEntity;
 import com.bradmcevoy.http.exceptions.NotFoundException;
-import com.bradmcevoy.http.http11.PartialGetHelper;
 import com.bradmcevoy.http.webdav.PropPatchHandler.Fields;
 import com.bradmcevoy.io.ReadingException;
 import com.bradmcevoy.io.WritingException;
@@ -69,7 +69,7 @@ public class FsFileResource extends FsResource implements CopyableResource, Dele
             in = contentService.getFileContent(file);
             if (range != null) {
                 log.debug("sendContent: ranged content: " + file.getAbsolutePath());
-                PartialGetHelper.writeRange(in, range, out);
+                PartialEntity.writeRange(in, range, out);
             } else {
                 log.debug("sendContent: send whole file " + file.getAbsolutePath());
                 IOUtils.copy(in, out);

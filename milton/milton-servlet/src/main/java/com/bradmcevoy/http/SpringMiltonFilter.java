@@ -1,5 +1,6 @@
 package com.bradmcevoy.http;
 
+import com.bradmcevoy.http.http11.DefaultHttp11ResponseHandler;
 import java.io.IOException;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -50,6 +51,7 @@ public class SpringMiltonFilter implements javax.servlet.Filter {
         parent.refresh();
         context = new ClassPathXmlApplicationContext(new String[]{"applicationContext.xml"}, parent);
         this.httpManager = (HttpManager) context.getBean("milton.http.manager");
+        httpManager.setBuffering(DefaultHttp11ResponseHandler.BUFFERING.never);
         this.filterConfig = fc;
         String sExcludePaths = fc.getInitParameter("milton.exclude.paths");
         excludeMiltonPaths = sExcludePaths.split(",");

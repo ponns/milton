@@ -1,8 +1,8 @@
 package com.ettrema.zsync;
 
+import com.ettrema.http.entity.PartialEntity;
 import com.ettrema.httpclient.zsyncclient.RangeLoader;
 import com.bradmcevoy.http.Range;
-import com.bradmcevoy.http.http11.PartialGetHelper;
 import com.bradmcevoy.io.StreamUtils;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -44,7 +44,7 @@ public class LocalFileRangeLoader implements RangeLoader{
 			fin = new FileInputStream(file);
 			BufferedInputStream bufIn = new BufferedInputStream(fin);
 			bytesDownloaded += (r.getFinish() - r.getStart());
-			PartialGetHelper.writeRange(bufIn, r, bout);
+			PartialEntity.writeRange(bufIn, r, bout);
 			//StreamUtils.readTo(bufIn, bout, true, false, r.getStart(), r.getFinish());						
 		} catch (FileNotFoundException ex) {
 			throw new RuntimeException(ex);

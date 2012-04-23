@@ -761,6 +761,10 @@ public class Host extends Folder {
     public void setSecure(boolean secure) {
         this.secure = secure;
     }
+
+    public HttpClient getClient() {
+        return client;
+    }
     
     
 }

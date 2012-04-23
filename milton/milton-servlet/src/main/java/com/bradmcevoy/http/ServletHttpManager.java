@@ -4,6 +4,8 @@ import com.bradmcevoy.http.webdav.WebDavResponseHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
 /**
  * Just extends the normal HttpManager to support initialising filters from
  * servlet init params.
@@ -66,8 +68,9 @@ public class ServletHttpManager extends HttpManager implements Initable {
             throw new RuntimeException(filterClass,ex);
         }
     }
-    
-	@Override
+
+
+    @Override
     public void destroy(HttpManager manager) {
         log.debug("destroy");
         if( resourceFactory != null ) {

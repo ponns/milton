@@ -7,6 +7,7 @@ import com.bradmcevoy.http.Request.Method;
 import com.bradmcevoy.http.Resource;
 import com.bradmcevoy.http.ResourceHandlerHelper;
 import com.bradmcevoy.http.Response;
+import com.ettrema.http.entity.ByteArrayEntity;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.ConflictException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
@@ -66,8 +67,7 @@ public class ReportHandler implements ExistingEntityHandler {
             } else {
                 String xml = r.process( request.getHostHeader(), request.getAbsolutePath(), resource, doc );
                 response.setStatus( Response.Status.SC_MULTI_STATUS );
-                response.getOutputStream().write( xml.getBytes());
-                response.getOutputStream().flush();
+                response.setEntity(new ByteArrayEntity(xml.getBytes()));
             }
         } catch( JDOMException ex ) {
             java.util.logging.Logger.getLogger( ReportHandler.class.getName() ).log( Level.SEVERE, null, ex );

@@ -13,6 +13,7 @@ import com.bradmcevoy.http.XmlWriter;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
 import com.bradmcevoy.http.exceptions.NotFoundException;
+import com.bradmcevoy.http.http11.Bufferable;
 import com.bradmcevoy.http.http11.DefaultHttp11ResponseHandler;
 import com.bradmcevoy.http.http11.DefaultHttp11ResponseHandler.BUFFERING;
 import com.bradmcevoy.http.http11.Http11ResponseHandler;
@@ -31,7 +32,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author brad
  */
-public class DefaultWebDavResponseHandler implements WebDavResponseHandler {
+public class DefaultWebDavResponseHandler implements WebDavResponseHandler, Bufferable {
 
     private static final Logger log = LoggerFactory.getLogger( DefaultWebDavResponseHandler.class );
     protected final Http11ResponseHandler wrapped;
@@ -242,17 +243,19 @@ public class DefaultWebDavResponseHandler implements WebDavResponseHandler {
         response.setStatus( Status.SC_PRECONDITION_FAILED );
     }
 
+	@Override
     public BUFFERING getBuffering() {
-        if( wrapped instanceof DefaultHttp11ResponseHandler) {
-            return ((DefaultHttp11ResponseHandler)wrapped).getBuffering();
+        if( wrapped instanceof Bufferable) {
+            return ((Bufferable)wrapped).getBuffering();
         } else {
             throw new RuntimeException( "Wrapped class is not a known type");
         }
     }
 
+	@Override
     public void setBuffering( BUFFERING buffering ) {
-        if( wrapped instanceof DefaultHttp11ResponseHandler) {
-            ((DefaultHttp11ResponseHandler)wrapped).setBuffering( buffering );
+        if( wrapped instanceof Bufferable) {
+            ((Bufferable)wrapped).setBuffering( buffering );
         } else {
             throw new RuntimeException( "Wrapped class is not a known type");
         }

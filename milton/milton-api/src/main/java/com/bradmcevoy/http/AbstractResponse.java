@@ -1,6 +1,5 @@
 package com.bradmcevoy.http;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
@@ -11,6 +10,7 @@ public abstract class AbstractResponse implements Response {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractResponse.class);
     protected Long contentLength;
+    protected Entity entity;
 
     public AbstractResponse() {
     }
@@ -157,8 +157,14 @@ public abstract class AbstractResponse implements Response {
         setResponseHeader(Header.VARY, value);
     }
 
-	@Override
-    public void close() {
+    @Override
+    public void setEntity(Entity entity) {
+        this.entity = entity;
+    }
+
+    @Override
+    public Entity getEntity() {
+        return entity;
     }
 
 	@Override
@@ -168,14 +174,6 @@ public abstract class AbstractResponse implements Response {
         }
         setStatus(Response.Status.SC_MOVED_TEMPORARILY);
         setLocationHeader(url);
-    }
-
-    public void write(String s) {
-        try {
-            this.getOutputStream().write(s.getBytes());
-        } catch (IOException ex) {
-            log.warn("Exception writing to output. Probably client closed connection", ex);
-        }
     }
 
     protected void setAnyDateHeader(Header name, Date date) {

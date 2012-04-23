@@ -11,7 +11,7 @@ import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.ConflictException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
 import com.bradmcevoy.http.webdav.WebDavResponseHandler;
-import com.ettrema.http.AccessControlledResource;
+import com.bradmcevoy.http.AccessControlledResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

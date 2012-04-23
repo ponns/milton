@@ -3,12 +3,12 @@ package com.ettrema.http.caldav;
 import com.bradmcevoy.http.Request;
 import com.bradmcevoy.http.Resource;
 import com.bradmcevoy.http.Response;
+import com.ettrema.http.entity.StringEntity;
 import com.bradmcevoy.http.http11.CustomPostHandler;
 import com.ettrema.http.SchedulingOutboxResource;
 import com.ettrema.http.SchedulingResponseItem;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Date;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
@@ -42,12 +42,9 @@ public class SchedulingCustomPostHandler implements CustomPostHandler {
             response.setDateHeader(new Date());
             response.setContentTypeHeader("application/xml; charset=\"utf-8\"");
             response.setContentLengthHeader((long)xml.length());
-
-            PrintWriter pw = new PrintWriter(response.getOutputStream(), true);
-
-            pw.print(xml);
-            pw.flush();
-            response.close();
+            response.setEntity(new StringEntity(xml));
+            // TODO: THIS IS NOT CALLED WITHIN THE STANDARDFILTER? DO WE NEED TO FLUSH HERE AGAIN?
+            //response.close();
 
 
         } catch (IOException ex) {

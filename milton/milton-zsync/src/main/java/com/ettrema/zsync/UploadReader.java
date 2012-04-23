@@ -12,9 +12,10 @@ import java.nio.channels.FileChannel;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
+
+import com.ettrema.http.entity.PartialEntity;
 import org.apache.commons.lang.StringUtils;
 import com.bradmcevoy.http.Range;
-import com.bradmcevoy.http.http11.PartialGetHelper;
 import com.bradmcevoy.io.StreamUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -162,7 +163,7 @@ public class UploadReader {
 	/**
 	 * Inserts the data from each DataRange into the output File, at the appropriate offset
 	 * 
-	 * @param dataRanges The Enumeration of Range/InputStream pairs parsed from the Upload's dataStream
+	 * @param byteRanges The Enumeration of Range/InputStream pairs parsed from the Upload's dataStream
 	 * @param outFile The output File being assembled
 	 * @throws IOException
 	 */
@@ -242,7 +243,7 @@ public class UploadReader {
 
 			fIn = new FileInputStream(inFile);
 			fOut = new FileOutputStream(outFile);
-			PartialGetHelper.sendBytes(fIn, fOut, inFile.length());
+            PartialEntity.sendBytes(fIn, fOut, inFile.length());
 		} finally {
 			StreamUtils.close(fIn);
 			StreamUtils.close(fOut);
@@ -264,8 +265,8 @@ public class UploadReader {
 	 * Constructor that parses the InputStream into an Upload object and initializes a temporary file
 	 * that will contain the assembled upload
 	 * 
-	 * @param destFile The server file to be updated
-	 * @param in A stream containing the ZSync PUT data
+	 * @param serverFile The server file to be updated
+	 * @param uploadIn A stream containing the ZSync PUT data
 	 * @throws IOException 
 	 */
 	public UploadReader(File serverFile, InputStream uploadIn) throws IOException {

@@ -5,6 +5,7 @@ import com.bradmcevoy.http.Request.Method;
 import com.bradmcevoy.http.Response.Status;
 import com.bradmcevoy.http.*;
 import com.bradmcevoy.http.exceptions.*;
+import com.ettrema.http.entity.ByteArrayEntity;
 import com.ettrema.common.LogUtils;
 import java.io.IOException;
 import org.apache.commons.io.output.ByteArrayOutputStream;
@@ -265,11 +266,7 @@ public class LockHandler implements ResourceHandler {
         writer.flush();
 
         LogUtils.debug(log, "lock response: " , out );
-        try {
-            response.getOutputStream().write( out.toByteArray() );
-        } catch( IOException ex ) {
-            log.warn( "exception writing to outputstream", ex );
-        }
+        response.setEntity(new ByteArrayEntity(out.toByteArray()));
 //        response.close();
 
     }

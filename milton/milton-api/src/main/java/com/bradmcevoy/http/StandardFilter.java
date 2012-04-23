@@ -31,6 +31,9 @@ public class StandardFilter implements Filter {
                     log.trace( "delegate to method handler: " + handler.getClass().getCanonicalName() );
                 }
                 handler.process( manager, request, response );
+                if (response.getEntity() != null) {
+                    manager.sendResponseEntity(response);
+                }
             }
 
         } catch( BadRequestException ex ) {
@@ -51,7 +54,7 @@ public class StandardFilter implements Filter {
                 response.setStatus( Response.Status.SC_INTERNAL_SERVER_ERROR );
             }
         } finally {
-            response.close();
+            manager.closeResponse(response);
         }
     }
 }

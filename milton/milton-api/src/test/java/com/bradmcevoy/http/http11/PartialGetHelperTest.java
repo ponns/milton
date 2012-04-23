@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import com.ettrema.http.entity.PartialEntity;
 import junit.framework.TestCase;
 
 import static org.easymock.classextension.EasyMock.*;
@@ -79,7 +81,7 @@ public class PartialGetHelperTest extends TestCase {
 		ByteArrayInputStream in = new ByteArrayInputStream(buf);
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		
-		partialGetHelper.sendBytes(in, out, length);
+		PartialEntity.sendBytes(in, out, length);
 		
 		assertEquals(500, out.toByteArray().length);
 		
@@ -92,7 +94,7 @@ public class PartialGetHelperTest extends TestCase {
 		ByteArrayInputStream in = new ByteArrayInputStream(buf);
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		
-		partialGetHelper.sendBytes(in, out, length);
+        PartialEntity.sendBytes(in, out, length);
 		
 		assertEquals(5000, out.toByteArray().length);
 		
@@ -113,7 +115,7 @@ public class PartialGetHelperTest extends TestCase {
 		ranges.add(new Range(2000, 2500));
 		ranges.add(new Range(3000, 3500));
 		
-		partialGetHelper.writeRanges(in, ranges, out);
+        PartialEntity.writeRanges(in, ranges, out);
 		
 		assertEquals(1500, out.toByteArray().length);
 

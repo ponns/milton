@@ -1,6 +1,6 @@
 package com.ettrema.http.acl;
 
-import com.ettrema.http.AccessControlledResource.Priviledge;
+import com.bradmcevoy.http.AccessControlledResource.Priviledge;
 import java.util.ArrayList;
 import java.util.List;
 

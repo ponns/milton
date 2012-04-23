@@ -4,17 +4,15 @@ import com.bradmcevoy.http.GetableResource;
 import com.bradmcevoy.http.Range;
 import com.bradmcevoy.http.Request;
 import com.bradmcevoy.http.Response;
+import com.ettrema.http.entity.PartialEntity;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
 import com.bradmcevoy.http.exceptions.NotFoundException;
 import com.bradmcevoy.io.StreamUtils;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -82,38 +80,10 @@ public class PartialGetHelper {
 			} finally {
 				StreamUtils.close(fout);
 			}
-			OutputStream responseOut = response.getOutputStream();
-			FileInputStream fin = null;
-			try {
-				fin = new FileInputStream(temp);
-				writeRanges(fin, ranges, responseOut);
-			} finally {
-				StreamUtils.close(fin);
-			}			
+            response.setEntity(
+               new PartialEntity(ranges, temp)
+            );
 		}
-	}
-
-	public static void writeRanges(InputStream in, List<Range> ranges, OutputStream responseOut) throws IOException {
-		try {
-			InputStream bufIn = in; //new BufferedInputStream(in);
-			long pos = 0;
-			for (Range r : ranges) {
-				long skip = r.getStart() - pos;
-				bufIn.skip(skip);
-				long length = r.getFinish() - r.getStart();
-				sendBytes(bufIn, responseOut, length);
-				pos = r.getFinish();
-			}
-		} finally {
-			StreamUtils.close(in);
-		}
-	}
-
-	public static void writeRange(InputStream in, Range r, OutputStream responseOut) throws IOException {
-		long skip = r.getStart();
-		in.skip(skip);
-		long length = r.getFinish() - r.getStart();
-		sendBytes(in, responseOut, length);
 	}
 
 	public int getMaxMemorySize() {
@@ -124,20 +94,4 @@ public class PartialGetHelper {
 		this.maxMemorySize = maxMemorySize;
 	}
 
-	public static void sendBytes(InputStream in, OutputStream out, long length) throws IOException {
-		log.trace("sendBytes: " + length);
-		long numRead = 0;
-		byte[] b = new byte[1024];
-		while (numRead < length) {
-			long remainingBytes = length - numRead;
-			int maxLength = remainingBytes > 1024 ? 1024 : (int) remainingBytes;
-			int s = in.read(b, 0, maxLength);
-			if( s < 0 ) {
-				break;
-			}
-			numRead += s;
-			out.write(b, 0, s);
-		}
-
-	}
 }

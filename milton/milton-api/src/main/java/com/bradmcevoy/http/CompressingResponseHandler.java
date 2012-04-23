@@ -1,5 +1,7 @@
 package com.bradmcevoy.http;
 
+import com.ettrema.http.entity.CompressedResourceEntity;
+import com.ettrema.http.entity.InputStreamEntity;
 import com.bradmcevoy.http.exceptions.NotFoundException;
 import com.bradmcevoy.http.http11.DefaultHttp11ResponseHandler;
 import com.bradmcevoy.http.exceptions.BadRequestException;
@@ -16,13 +18,7 @@ import com.bradmcevoy.http.http11.DefaultCacheControlHelper;
 import com.bradmcevoy.http.webdav.WebDavResponseHandler;
 import com.bradmcevoy.io.BufferingOutputStream;
 import com.bradmcevoy.io.FileUtils;
-import com.bradmcevoy.io.ReadingException;
-import com.bradmcevoy.io.StreamUtils;
-import com.bradmcevoy.io.WritingException;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Date;
-import org.apache.commons.io.IOUtils;
 
 /**
  * Response Handler which wraps another, and compresses content if appropriate
@@ -75,17 +71,15 @@ public class CompressingResponseHandler extends AbstractWrappingResponseHandler 
 				CompressedResource compressedResource = (CompressedResource) r;
 				String acceptableEncoding = compressedResource.getSupportedEncoding(acceptableEncodings);
 				if (acceptableEncoding != null) {
-					try {
-						response.setContentTypeHeader(contentType);
-						cacheControlHelper.setCacheControl(r, response, request.getAuthorization());
-						Long contentLength = compressedResource.getCompressedContentLength(acceptableEncoding);
-						response.setContentLengthHeader(contentLength);
-						response.setContentEncodingHeader(Response.ContentEncoding.GZIP);
-						response.setVaryHeader("Accept-Encoding");
-						compressedResource.sendCompressedContent(acceptableEncoding, response.getOutputStream(), null, params, contentType);
-					} catch (IOException ex) {
-						log.warn("IOException sending compressed content", ex);
-					}
+                    response.setContentTypeHeader(contentType);
+                    cacheControlHelper.setCacheControl(r, response, request.getAuthorization());
+                    Long contentLength = compressedResource.getCompressedContentLength(acceptableEncoding);
+                    response.setContentLengthHeader(contentLength);
+                    response.setContentEncodingHeader(Response.ContentEncoding.GZIP);
+                    response.setVaryHeader("Accept-Encoding");
+                    response.setEntity(new CompressedResourceEntity(
+                       compressedResource, params, contentType, acceptableEncoding
+                    ));
 					return;
 				}
 			}
@@ -121,18 +115,7 @@ public class CompressingResponseHandler extends AbstractWrappingResponseHandler 
 				}
 				response.setContentTypeHeader(contentType);
 				cacheControlHelper.setCacheControl(r, response, request.getAuthorization());
-				InputStream in = tempOut.getInputStream();
-				try {
-					StreamUtils.readTo(in, response.getOutputStream());
-				} catch (ReadingException ex) {
-					throw new RuntimeException(ex);
-				} catch (WritingException ex) {
-					log.warn("exception writing, client probably closed connection", ex);
-				} finally {
-					IOUtils.closeQuietly(in);
-				}
-				log.trace("finished sending content");
-				return;
+                response.setEntity(new InputStreamEntity(tempOut.getInputStream()));
 			} else {
 				log.trace("respondContent: not compressable");
 				// We really should set this header, but it causes IE to not cache files (eg images)

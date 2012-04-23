@@ -131,6 +131,10 @@ public interface Response {
         }
     }
 
+    public interface Entity {
+        void write(Response response, OutputStream outputStream) throws Exception;
+    }
+
     public Response.Status getStatus();
 
     public Map<String, String> getHeaders();
@@ -171,6 +175,10 @@ public interface Response {
     void setContentTypeHeader( String string );
 
     String getContentTypeHeader();
+
+    Entity getEntity();
+
+    void setEntity(Entity entity);
 
     /**
      * Set the cache control header to allow the resource to be cached
@@ -216,7 +224,7 @@ public interface Response {
      * Will set the status to moved_temporaruly and set the location header
      * to the given url
      * 
-     * @param unencodedUrl
+     * @param url
      */
     void sendRedirect( String url );
 

@@ -3,7 +3,9 @@ package com.bradmcevoy.http;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.ConflictException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
+import com.bradmcevoy.http.http11.Bufferable;
 import com.bradmcevoy.http.http11.CustomPostHandler;
+import com.bradmcevoy.http.http11.DefaultHttp11ResponseHandler;
 import com.bradmcevoy.http.http11.Http11ResponseHandler;
 import com.bradmcevoy.http.http11.auth.ExpiredNonceRemover;
 import com.bradmcevoy.http.http11.auth.Nonce;
@@ -18,6 +20,7 @@ import com.ettrema.event.EventManager;
 import com.ettrema.event.EventManagerImpl;
 import com.ettrema.event.RequestEvent;
 import com.ettrema.event.ResponseEvent;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -119,6 +122,15 @@ public class HttpManager {
 		this.handlers = handlers;
 
 		initHandlers();
+	}
+
+	public void sendResponseEntity(Response response) throws Exception {
+		response.getEntity().write(response, response.getOutputStream());
+	}
+
+	public void closeResponse(Response response) {
+		response.close(); 
+
 	}
 
 	private void initHandlers() {
@@ -331,6 +343,24 @@ public class HttpManager {
 			} catch (Throwable e) {
 				log.warn("Exception stopping: " + stoppable.getClass(), e);
 			}
+		}
+	}
+
+	public DefaultHttp11ResponseHandler.BUFFERING getBuffering() {
+		if (this.responseHandler instanceof Bufferable) {
+			Bufferable hrh = (Bufferable) responseHandler;
+			return hrh.getBuffering();
+		} else {
+			return null; // unknown
+		}
+	}
+
+	public void setBuffering(DefaultHttp11ResponseHandler.BUFFERING buffering) {
+		if (this.responseHandler instanceof Bufferable) {
+			Bufferable hrh = (Bufferable) responseHandler;
+			hrh.setBuffering(buffering);
+		} else {
+			throw new RuntimeException("Can't set buffering on unsupported Http11ResponseHandler: " + responseHandler.getClass());
 		}
 	}
 }

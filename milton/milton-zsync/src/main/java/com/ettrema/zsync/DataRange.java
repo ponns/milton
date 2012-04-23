@@ -5,7 +5,7 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 
 import com.bradmcevoy.http.Range;
-import com.bradmcevoy.http.http11.PartialGetHelper;
+import com.ettrema.http.entity.PartialEntity;
 import com.bradmcevoy.io.BufferingOutputStream;
 
 /**
@@ -41,7 +41,7 @@ public class DataRange {
 		this.data = new BufferingOutputStream( threshold );
 		
 		long length = range.getFinish() - range.getStart();
-		PartialGetHelper.sendBytes( instream , data, length);
+        PartialEntity.sendBytes(instream, data, length);
 
 		this.data.close();
 		

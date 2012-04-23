@@ -2,10 +2,9 @@ package com.bradmcevoy.http.http11;
 
 import com.bradmcevoy.http.*;
 import com.bradmcevoy.http.Response.Status;
+import com.ettrema.http.entity.BufferingGetableResourceEntity;
+import com.ettrema.http.entity.GetableResourceEntity;
 import com.bradmcevoy.http.exceptions.BadRequestException;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -15,18 +14,12 @@ import org.slf4j.LoggerFactory;
 
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
 import com.bradmcevoy.http.exceptions.NotFoundException;
-import com.bradmcevoy.io.BufferingOutputStream;
-import com.bradmcevoy.io.ReadingException;
-import com.bradmcevoy.io.StreamUtils;
-import com.bradmcevoy.io.WritingException;
 import com.ettrema.sso.ExternalIdentityProvider;
-import java.io.InputStream;
-import org.apache.commons.io.IOUtils;
 
 /**
  *
  */
-public class DefaultHttp11ResponseHandler implements Http11ResponseHandler {
+public class DefaultHttp11ResponseHandler implements Http11ResponseHandler, Bufferable {
 
 	public enum BUFFERING {
 
@@ -173,11 +166,7 @@ public class DefaultHttp11ResponseHandler implements Http11ResponseHandler {
 		if (ct != null) {
 			response.setContentTypeHeader(ct);
 		}
-		try {
-			resource.sendContent(response.getOutputStream(), range, params, ct);
-		} catch (IOException ex) {
-			log.warn("IOException writing to output, probably client terminated connection", ex);
-		}
+        response.setEntity(new GetableResourceEntity(resource, range, params, ct));
 	}
 
 	@Override
@@ -231,40 +220,14 @@ public class DefaultHttp11ResponseHandler implements Http11ResponseHandler {
 				if (contentLength != null) {
 					response.setContentLengthHeader(contentLength);
 				}
-				sendContent(request, response, (GetableResource) resource, params, null, ct);
+                response.setEntity(new GetableResourceEntity(
+                   gr, params, ct
+                ));
 			} else {
-				log.trace("buffering content...");
-				BufferingOutputStream tempOut = new BufferingOutputStream(maxMemorySize);
-				try {
-					((GetableResource) resource).sendContent(tempOut, null, params, ct);
-					tempOut.close();
-				} catch (IOException ex) {
-					tempOut.deleteTempFileIfExists();
-					throw new RuntimeException("Exception generating buffered content", ex);
-				}
-				Long bufContentLength = tempOut.getSize();
-				if (contentLength != null) {
-					if (!contentLength.equals(bufContentLength)) {
-						throw new RuntimeException("Content Length specified by resource: " + contentLength + " is not equal to the size of content when generated: " + bufContentLength + " This error can be suppressed by setting the buffering property to whenNeeded or never");
-					}
-				}
-				log.trace("sending buffered content...");
-				response.setContentLengthHeader(bufContentLength);
-				InputStream in = tempOut.getInputStream();
-				try {
-					StreamUtils.readTo(in, response.getOutputStream());
-				} catch (ReadingException ex) {
-					throw new RuntimeException(ex);
-				} catch (WritingException ex) {
-					log.warn("exception writing, client probably closed connection", ex);
-				} finally {
-					IOUtils.closeQuietly(in); // make sure we close to delete temporary file
-				}
-				return;
-
-
+                response.setEntity(new BufferingGetableResourceEntity(
+                   gr, params, ct, contentLength, getMaxMemorySize()
+                ));
 			}
-
 		}
 	}
 
@@ -285,33 +248,6 @@ public class DefaultHttp11ResponseHandler implements Http11ResponseHandler {
 		response.setLastModifiedHeader(modDate);
 
 		cacheControlHelper.setCacheControl(resource, response, request.getAuthorization());
-	}
-
-	protected void sendContent(Request request, Response response, GetableResource resource, Map<String, String> params, Range range, String contentType) throws NotAuthorizedException, BadRequestException, NotFoundException {
-		long l = System.currentTimeMillis();
-		log.trace("sendContent");
-		OutputStream out = outputStreamForResponse(request, response, resource);
-		try {
-			resource.sendContent(out, null, params, contentType);
-			out.flush();
-			if (log.isTraceEnabled()) {
-				l = System.currentTimeMillis() - l;
-				log.trace("sendContent finished in " + l + "ms");
-			}
-		} catch (IOException ex) {
-			log.warn("IOException sending content", ex);
-		}
-	}
-
-	protected OutputStream outputStreamForResponse(Request request, Response response, GetableResource resource) {
-		OutputStream outToUse = response.getOutputStream();
-		return outToUse;
-	}
-
-	protected void output(final Response response, final String s) {
-		PrintWriter pw = new PrintWriter(response.getOutputStream(), true);
-		pw.print(s);
-		pw.flush();
 	}
 
 	protected void setRespondContentCommonHeaders(Response response, Resource resource, Auth auth) {

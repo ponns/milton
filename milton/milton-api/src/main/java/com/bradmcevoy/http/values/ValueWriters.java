@@ -53,6 +53,7 @@ public class ValueWriters {
         writers.add(new WrappedHrefWriter());
         writers.add(new SupportedReportSetWriter()); 
 		writers.add(new AddressDataTypeListValueWriter());
+		writers.add(new PriviledgeListValueWriter());
 		// ToStringValueWriter is the default value writer and applied when no 
 		// other writer is available.
 		writers.add(new ToStringValueWriter()); 

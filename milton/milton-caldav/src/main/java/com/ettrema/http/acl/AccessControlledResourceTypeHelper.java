@@ -2,7 +2,7 @@ package com.ettrema.http.acl;
 
 import com.bradmcevoy.http.Resource;
 import com.bradmcevoy.http.webdav.ResourceTypeHelper;
-import com.ettrema.http.AccessControlledResource;
+import com.bradmcevoy.http.AccessControlledResource;
 import java.util.List;
 import javax.xml.namespace.QName;
 import org.slf4j.Logger;

@@ -42,16 +42,21 @@ public class DebugFilter implements Filter{
 
 
     public void process(FilterChain chain, Request request, Response response) {
-        try {
-            DebugRequest req2 = new DebugRequest(request);
-            DebugResponse resp2 = new DebugResponse(response);
-            chain.process(req2, resp2);
-            record(req2,resp2);
-            response.getOutputStream().write(resp2.out.toByteArray());
-            response.getOutputStream().flush();
-        } catch (IOException ex) {
-            log.error("", ex);
-        }
+        DebugRequest req2 = new DebugRequest(request);
+        final DebugResponse resp2 = new DebugResponse(response);
+        chain.process(req2, resp2);
+        record(req2, resp2);
+        response.setEntity(new Response.Entity() {
+            @Override
+            public void write(Response response, OutputStream outputStream) throws Exception {
+                try {
+                    outputStream.write(resp2.out.toByteArray());
+                    outputStream.flush();
+                } catch (IOException ex) {
+                    log.error("", ex);
+                }
+            }
+        });
     }
 
     private synchronized void record(DebugRequest req2, DebugResponse resp2) {
@@ -94,26 +99,32 @@ public class DebugFilter implements Filter{
             out = new ByteArrayOutputStream();
         }
 
+		@Override
         public Status getStatus() {
             return r.getStatus();
         }
 
+		@Override
         public void setStatus(Status status) {
             r.setStatus(status);
         }
 
+		@Override
         public void setNonStandardHeader(String code, String value) {
             r.setNonStandardHeader(code, value);
         }
 
+		@Override
         public String getNonStandardHeader(String code) {
             return r.getNonStandardHeader(code);
         }
 
+		@Override
         public OutputStream getOutputStream() {
             return out;
         }
 
+		@Override
         public  Map<String,String> getHeaders() {
             return r.getHeaders();
         }
@@ -144,18 +155,26 @@ public class DebugFilter implements Filter{
             }
         }
 
+		@Override
         public void setAuthenticateHeader( List<String> challenges ) {
             this.challenges = challenges;
             r.setAuthenticateHeader( challenges );
         }
 
+		@Override
         public Cookie setCookie( Cookie cookie ) {
             return r.setCookie( cookie );
         }
 
+		@Override
         public Cookie setCookie( String name, String value ) {
             return r.setCookie( name, value );
         }
+
+		@Override
+		public void close() {
+			r.close();
+		}
 
 
     }
