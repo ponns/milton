@@ -27,6 +27,7 @@ public class MkCalendarHandler implements Handler, MkColHandler.CollectionResour
         this.propPatchHandler = propPatchHandler;
     }
 
+    @Override
     public String[] getMethods() {
         return new String[]{Method.MKCALENDAR.code};
     }
@@ -36,6 +37,7 @@ public class MkCalendarHandler implements Handler, MkColHandler.CollectionResour
         return (handler instanceof MakeCalendarResource);
     }
 
+    @Override
     public void process(HttpManager manager, Request request, Response response) throws ConflictException, NotAuthorizedException, BadRequestException {
         try {
             mkColHandler.process(manager, request, response, this);
@@ -44,6 +46,7 @@ public class MkCalendarHandler implements Handler, MkColHandler.CollectionResour
         }
     }
 
+    @Override
     public CollectionResource createResource(MakeCollectionableResource existingCol, String newName, Request request) throws ConflictException, NotAuthorizedException, BadRequestException, IOException {
         MakeCalendarResource mkcal = (MakeCalendarResource) existingCol;
         CollectionResource newCal = mkcal.createCalendar(newName);
@@ -52,3 +55,4 @@ public class MkCalendarHandler implements Handler, MkColHandler.CollectionResour
 
     }
 }
+
