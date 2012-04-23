@@ -10,6 +10,11 @@ import com.bradmcevoy.http.Response;
  */
 public class DefaultEntityTransport implements EntityTransport{
 
+	public DefaultEntityTransport() {
+	}
+
+	
+	
 	@Override
 	public void sendResponseEntity(Response response) throws Exception {
 		response.getEntity().write(response, response.getOutputStream());

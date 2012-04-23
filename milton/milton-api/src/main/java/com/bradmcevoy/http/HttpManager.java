@@ -1,5 +1,7 @@
 package com.bradmcevoy.http;
 
+import com.bradmcevoy.http.entity.DefaultEntityTransport;
+import com.bradmcevoy.http.entity.EntityTransport;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.ConflictException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
@@ -61,6 +63,7 @@ public class HttpManager {
 	private PropertyAuthoriser propertyPermissionService;
 	private EventManager eventManager = new EventManagerImpl();
 	private final List<Stoppable> shutdownHandlers = new CopyOnWriteArrayList<Stoppable>();
+	private EntityTransport entityTransport;
 
 	/**
 	 * Creates the manager with a DefaultResponseHandler
@@ -82,6 +85,8 @@ public class HttpManager {
 		this.responseHandler = webdavResponseHandler;
 		this.handlers = new ProtocolHandlers(webdavResponseHandler, authenticationService);
 
+		entityTransport = new DefaultEntityTransport(); // default implementation, can be overridden with setter
+		
 		initHandlers();
 
 		shutdownHandlers.add(expiredNonceRemover);
@@ -125,11 +130,11 @@ public class HttpManager {
 	}
 
 	public void sendResponseEntity(Response response) throws Exception {
-		response.getEntity().write(response, response.getOutputStream());
+		entityTransport.sendResponseEntity(response);
 	}
 
 	public void closeResponse(Response response) {
-		response.close(); 
+		entityTransport.closeResponse(response);
 
 	}
 
@@ -363,4 +368,12 @@ public class HttpManager {
 			throw new RuntimeException("Can't set buffering on unsupported Http11ResponseHandler: " + responseHandler.getClass());
 		}
 	}
+
+	public EntityTransport getEntityTransport() {
+		return entityTransport;
+	}
+
+	public void setEntityTransport(EntityTransport entityTransport) {
+		this.entityTransport = entityTransport;
+	}		
 }
