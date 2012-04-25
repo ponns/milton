@@ -3,7 +3,7 @@ package com.ettrema.http.caldav;
 import com.bradmcevoy.http.Request;
 import com.bradmcevoy.http.Resource;
 import com.bradmcevoy.http.Response;
-import com.ettrema.http.entity.StringEntity;
+import com.bradmcevoy.http.entity.StringEntity;
 import com.bradmcevoy.http.http11.CustomPostHandler;
 import com.ettrema.http.SchedulingOutboxResource;
 import com.ettrema.http.SchedulingResponseItem;
@@ -20,12 +20,14 @@ public class SchedulingCustomPostHandler implements CustomPostHandler {
     private static final Logger log = LoggerFactory.getLogger(SchedulingCustomPostHandler.class);
     private final SchedulingXmlHelper schedulingHelper = new SchedulingXmlHelper();
 
+    @Override
     public boolean supports(Resource resource, Request request) {
         boolean b = resource instanceof SchedulingOutboxResource && contentTypeIsCalendar(request);
         log.trace("supports: " + b);
         return b;
     }
 
+    @Override
     public void process(Resource resource, Request request, Response response) {
         log.trace("process");
         try {

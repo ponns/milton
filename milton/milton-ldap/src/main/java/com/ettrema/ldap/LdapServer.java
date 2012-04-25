@@ -18,7 +18,6 @@
  */
 package com.ettrema.ldap;
 
-
 import com.bradmcevoy.http.webdav.WebDavProtocol;
 import com.bradmcevoy.property.PropertySource;
 import java.io.File;
@@ -40,32 +39,26 @@ import org.slf4j.LoggerFactory;
  * LDAP server, handle LDAP directory requests.
  */
 public class LdapServer extends Thread {
-	
-	private static final Logger log = LoggerFactory.getLogger(LdapServer.class);
-	
+
+    private static final Logger log = LoggerFactory.getLogger(LdapServer.class);
     /**
      * Default LDAP port
      */
     public static final int DEFAULT_PORT = 389;
-	
-	private final UserFactory userSessionFactory;	
-	private final List<PropertySource> propertySources;
-	private final SearchManager searchManager = new SearchManager();
-	
+    private final UserFactory userSessionFactory;
+    private final List<PropertySource> propertySources;
+    private final SearchManager searchManager = new SearchManager();
     protected boolean nosslFlag;
     private int port;
-	private String bindAddress;
-	
-	private boolean allowRemote;
-	private File keystoreFile;
-	private String keystoreType;
-	private String keystorePass;	
-    private ServerSocket serverSocket;	
+    private String bindAddress;
+    private boolean allowRemote;
+    private File keystoreFile;
+    private String keystoreType;
+    private String keystorePass;
+    private ServerSocket serverSocket;
 
-	
     /**
-     * Create a ServerSocket to listen for connections.
-     * Start the thread.
+     * Create a ServerSocket to listen for connections. Start the thread.
      *
      * @param port pop listen port, 389 if not defined (0)
      */
@@ -77,54 +70,53 @@ public class LdapServer extends Thread {
         } else {
             this.port = port;
         }
-		this.bindAddress = bindAddress;		
-		this.userSessionFactory = userSessionFactory;
-		this.propertySources = propertySources;
+        this.bindAddress = bindAddress;
+        this.userSessionFactory = userSessionFactory;
+        this.propertySources = propertySources;
         this.nosslFlag = nosslFlag;
     }
-	
+
     public LdapServer(UserFactory userSessionFactory, List<PropertySource> propertySources) {
         super(LdapServer.class.getName());
         setDaemon(true);
-		this.userSessionFactory = userSessionFactory;
-		this.propertySources = propertySources;
+        this.userSessionFactory = userSessionFactory;
+        this.propertySources = propertySources;
     }
-	
-	/**
-	 * This constructor is for convenience. It uses the list of property sources
-	 * from the WebDavProtocol object, freeing the developer from the need
-	 * to publicly declare property sources when only the built in ones are used.
-	 * 
-	 * @param userSessionFactory
-	 * @param webDavProtocol 
-	 */
+
+    /**
+     * This constructor is for convenience. It uses the list of property sources
+     * from the WebDavProtocol object, freeing the developer from the need to
+     * publicly declare property sources when only the built in ones are used.
+     *
+     * @param userSessionFactory
+     * @param webDavProtocol
+     */
     public LdapServer(UserFactory userSessionFactory, WebDavProtocol webDavProtocol) {
         super(LdapServer.class.getName());
         setDaemon(true);
-		this.userSessionFactory = userSessionFactory;
-		this.propertySources = webDavProtocol.getPropertySources();
+        this.userSessionFactory = userSessionFactory;
+        this.propertySources = webDavProtocol.getPropertySources();
     }
 
-	public boolean isNosslFlag() {
-		return nosslFlag;
-	}
+    public boolean isNosslFlag() {
+        return nosslFlag;
+    }
 
-	public void setNosslFlag(boolean nosslFlag) {
-		this.nosslFlag = nosslFlag;
-	}
-		
-	public String getBindAddress() {
-		return bindAddress;
-	}
+    public void setNosslFlag(boolean nosslFlag) {
+        this.nosslFlag = nosslFlag;
+    }
 
-	public void setBindAddress(String bindAddress) {
-		this.bindAddress = bindAddress;
-	}
+    public String getBindAddress() {
+        return bindAddress;
+    }
 
-	public void setPort(int port) {
-		this.port = port;
-	}
-	
+    public void setBindAddress(String bindAddress) {
+        this.bindAddress = bindAddress;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
 
     public String getProtocolName() {
         return "LDAP";
@@ -134,19 +126,17 @@ public class LdapServer extends Thread {
         return new LdapConnection(clientSocket, userSessionFactory, propertySources, searchManager);
     }
 
-	@Override
-	public synchronized void start() {
-		try {
-			log.info("Created server, binding to address. bind address: " + bindAddress + " port: " + port);
-			bind();
-		} catch (Exception ex) {
-			throw new RuntimeException(ex);
-		}
-		log.info("Starting the LDAP server thread");
-		super.start();
-	}
-
-	
+    @Override
+    public synchronized void start() {
+        try {
+            log.info("Created server, binding to address. bind address: " + bindAddress + " port: " + port);
+            bind();
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+        log.info("Starting the LDAP server thread");
+        super.start();
+    }
 
     /**
      * Bind server socket on defined port.
@@ -207,12 +197,10 @@ public class LdapServer extends Thread {
         }
     }
 
-
     /**
-     * The body of the server thread.  Loop forever, listening for and
-     * accepting connections from clients.  For each connection,
-     * create a Connection object to handle communication through the
-     * new Socket.
+     * The body of the server thread. Loop forever, listening for and accepting
+     * connections from clients. For each connection, create a Connection object
+     * to handle communication through the new Socket.
      */
     @Override
     public void run() {
@@ -221,15 +209,15 @@ public class LdapServer extends Thread {
         try {
             //noinspection InfiniteLoopStatement
             while (true) {
-				System.out.println("Waiting for connection...");
+                System.out.println("Waiting for connection...");
                 clientSocket = serverSocket.accept();
-				System.out.println("Accepted socket from: " + clientSocket.getRemoteSocketAddress());
+                System.out.println("Accepted socket from: " + clientSocket.getRemoteSocketAddress());
                 // set default timeout to 5 minutes
                 clientSocket.setSoTimeout(300000);
                 log.info("CONNECTION_FROM" + clientSocket.getInetAddress() + port);
                 // only accept localhost connections for security reasons
-                if (allowRemote ||
-                        clientSocket.getInetAddress().isLoopbackAddress()) {
+                if (allowRemote
+                        || clientSocket.getInetAddress().isLoopbackAddress()) {
                     connection = createConnectionHandler(clientSocket);
                     connection.start();
                 } else {
@@ -254,9 +242,8 @@ public class LdapServer extends Thread {
                 connection.close();
             }
         }
-		System.out.println("LDAP Server has exited");
+        System.out.println("LDAP Server has exited");
     }
-
 
     /**
      * Close server socket
@@ -270,7 +257,7 @@ public class LdapServer extends Thread {
             log.error("LOG_EXCEPTION_CLOSING_SERVER_SOCKET", e);
         }
     }
-	
+
     /**
      * Server socket TCP port
      *
@@ -280,36 +267,35 @@ public class LdapServer extends Thread {
         return port;
     }
 
-	public String getKeystorePass() {
-		return keystorePass;
-	}
+    public String getKeystorePass() {
+        return keystorePass;
+    }
 
-	public void setKeystorePass(String keystorePass) {
-		this.keystorePass = keystorePass;
-	}
+    public void setKeystorePass(String keystorePass) {
+        this.keystorePass = keystorePass;
+    }
 
-	public String getKeystoreType() {
-		return keystoreType;
-	}
+    public String getKeystoreType() {
+        return keystoreType;
+    }
 
-	public void setKeystoreType(String keystoreType) {
-		this.keystoreType = keystoreType;
-	}
+    public void setKeystoreType(String keystoreType) {
+        this.keystoreType = keystoreType;
+    }
 
-	public File getKeystoreFile() {
-		return keystoreFile;
-	}
+    public File getKeystoreFile() {
+        return keystoreFile;
+    }
 
-	public void setKeystoreFile(File keystoreFile) {
-		this.keystoreFile = keystoreFile;
-	}
+    public void setKeystoreFile(File keystoreFile) {
+        this.keystoreFile = keystoreFile;
+    }
 
-	public boolean isAllowRemote() {
-		return allowRemote;
-	}
+    public boolean isAllowRemote() {
+        return allowRemote;
+    }
 
-	public void setAllowRemote(boolean allowRemote) {
-		this.allowRemote = allowRemote;
-	}
-		
+    public void setAllowRemote(boolean allowRemote) {
+        this.allowRemote = allowRemote;
+    }
 }

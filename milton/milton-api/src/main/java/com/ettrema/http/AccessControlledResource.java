@@ -1,5 +1,7 @@
-package com.bradmcevoy.http;
+package com.ettrema.http;
 
+import com.bradmcevoy.http.Auth;
+import com.bradmcevoy.http.Resource;
 import com.bradmcevoy.http.values.HrefList;
 import com.ettrema.http.acl.Principal;
 import java.util.List;

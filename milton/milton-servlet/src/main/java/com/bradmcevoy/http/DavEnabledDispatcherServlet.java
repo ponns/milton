@@ -1,6 +1,7 @@
 package com.bradmcevoy.http;
 
 import java.io.IOException;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -39,7 +40,7 @@ public class DavEnabledDispatcherServlet extends DispatcherServlet{
         } catch (Exception ex) {
             throw new ServletException(ex);
         }
-
     }
+    
 
 }

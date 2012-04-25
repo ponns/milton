@@ -1,6 +1,5 @@
 package com.bradmcevoy.http.entity;
 
-import com.ettrema.http.entity.GetableResourceEntity;
 import com.bradmcevoy.http.GetableResource;
 import com.bradmcevoy.http.Response;
 import com.bradmcevoy.io.BufferingOutputStream;

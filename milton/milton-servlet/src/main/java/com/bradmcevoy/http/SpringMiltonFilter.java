@@ -4,6 +4,7 @@ import com.bradmcevoy.http.http11.DefaultHttp11ResponseHandler;
 import java.io.IOException;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -37,6 +38,7 @@ public class SpringMiltonFilter implements javax.servlet.Filter {
     private ClassPathXmlApplicationContext context;
     private HttpManager httpManager;
     private FilterConfig filterConfig;
+    private ServletContext servletContext;
     /**
      * Resources with this as the first part of their path will not be served
      * from milton. Instead, this filter will allow filter processing to
@@ -45,7 +47,7 @@ public class SpringMiltonFilter implements javax.servlet.Filter {
     private String[] excludeMiltonPaths;
 
     @Override
-    public void init(FilterConfig fc) throws ServletException {
+    public void init(FilterConfig fc) throws ServletException {        
         StaticApplicationContext parent = new StaticApplicationContext();
         parent.getBeanFactory().registerSingleton("servletContext", fc.getServletContext());
         parent.refresh();
@@ -53,6 +55,7 @@ public class SpringMiltonFilter implements javax.servlet.Filter {
         this.httpManager = (HttpManager) context.getBean("milton.http.manager");
         httpManager.setBuffering(DefaultHttp11ResponseHandler.BUFFERING.never);
         this.filterConfig = fc;
+        servletContext = fc.getServletContext();
         String sExcludePaths = fc.getInitParameter("milton.exclude.paths");
         excludeMiltonPaths = sExcludePaths.split(",");
     }
@@ -81,10 +84,10 @@ public class SpringMiltonFilter implements javax.servlet.Filter {
         context.close();
     }
 
-    private void doMiltonProcessing(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    private void doMiltonProcessing(HttpServletRequest req, HttpServletResponse resp) throws IOException {        
         try {
             MiltonServlet.setThreadlocals(req, resp);
-            Request request = new com.bradmcevoy.http.ServletRequest(req);
+            Request request = new com.bradmcevoy.http.ServletRequest(req,servletContext);
             Response response = new com.bradmcevoy.http.ServletResponse(resp);
             httpManager.process(request, response);
         } finally {
@@ -92,6 +95,5 @@ public class SpringMiltonFilter implements javax.servlet.Filter {
             resp.getOutputStream().flush();
             resp.flushBuffer();
         }
-
     }
 }

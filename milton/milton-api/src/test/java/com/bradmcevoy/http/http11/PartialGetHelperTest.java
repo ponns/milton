@@ -1,6 +1,7 @@
 package com.bradmcevoy.http.http11;
 
 import com.bradmcevoy.http.Range;
+import com.bradmcevoy.http.entity.PartialEntity;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -8,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.ettrema.http.entity.PartialEntity;
 import junit.framework.TestCase;
 
 import static org.easymock.classextension.EasyMock.*;

@@ -9,8 +9,8 @@ import org.springframework.web.servlet.mvc.Controller;
 
 /**
  *
- * IMPORTANT !!!!!!!!!!!
- * This controller will ONLY work if used in conjunction with DavEnabledDispatcherServlet
+ * IMPORTANT !!!!!!!!!!! This controller will ONLY work if used in conjunction
+ * with DavEnabledDispatcherServlet
  *
  * It WILL NOT work with the standard spring DispatcherServlet because it
  * explicitly forbids the use of webdav methods such as PROPFIND
@@ -21,7 +21,6 @@ import org.springframework.web.servlet.mvc.Controller;
 public class MiltonController implements Controller {
 
     private static final Logger log = LoggerFactory.getLogger(MiltonController.class);
-
     private HttpManager httpManager;
 
     public MiltonController() {
@@ -32,9 +31,10 @@ public class MiltonController implements Controller {
         this.httpManager = httpManager;
     }
 
+    @Override
     public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        log.debug("handleRequest: " + request.getRequestURI() + " method:" + request.getMethod() ) ;
-        ServletRequest rq = new ServletRequest(request);
+        log.debug("handleRequest: " + request.getRequestURI() + " method:" + request.getMethod());
+        ServletRequest rq = new ServletRequest(request, null);
         ServletResponse rs = new ServletResponse(response);
         httpManager.process(rq, rs);
         return null;
@@ -47,6 +47,4 @@ public class MiltonController implements Controller {
     public void setHttpManager(HttpManager httpManager) {
         this.httpManager = httpManager;
     }
-
-
 }

@@ -141,6 +141,7 @@ public class PutHandler implements Handler {
 						PutableResource putableResource = (PutableResource) folderResource;
 						processCreate(manager, request, response, putableResource, nameToCreate);
 					} else {
+						LogUtils.debug(log, "method not implemented: PUT on class: ", folderResource.getClass(), folderResource.getName());
 						manager.getResponseHandler().respondMethodNotImplemented(folderResource, response, request);
 					}
 				} finally {
@@ -211,7 +212,7 @@ public class PutHandler implements Handler {
 		if (r == null) {
 			if (parent instanceof MakeCollectionableResource) {
 				MakeCollectionableResource mkcol = (MakeCollectionableResource) parent;
-				log.debug("autocreating new folder: " + path.getName());
+				LogUtils.debug(log, "autocreating new folder: ", path.getName());
 				CollectionResource newCol = mkcol.createCollection(path.getName());
 				manager.getEventManager().fireEvent(new NewFolderEvent(newCol));
 				return newCol;

@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -65,6 +66,8 @@ public class SpringAwareMiltonServlet implements Servlet{
     ApplicationContext context;
     HttpManager httpManager;
     
+    private ServletContext servletContext;
+    
     private static final ThreadLocal<HttpServletRequest> originalRequest = new ThreadLocal<HttpServletRequest>();
     private static final ThreadLocal<HttpServletResponse> originalResponse = new ThreadLocal<HttpServletResponse>();
 
@@ -86,9 +89,11 @@ public class SpringAwareMiltonServlet implements Servlet{
         }
     }
     
+    @Override
     public void init(ServletConfig config) throws ServletException {
         try {
             this.config = config;
+            servletContext = config.getServletContext();
             context = new ClassPathXmlApplicationContext(new String[] {"applicationContext.xml"});
             httpManager = (HttpManager) context.getBean("milton.http.manager");
         } catch (Throwable ex) {
@@ -97,13 +102,14 @@ public class SpringAwareMiltonServlet implements Servlet{
         }        
     }
     
+    @Override
     public void service(javax.servlet.ServletRequest servletRequest, javax.servlet.ServletResponse servletResponse) throws ServletException, IOException {
         HttpServletRequest req = (HttpServletRequest) servletRequest;
         HttpServletResponse resp = (HttpServletResponse) servletResponse;
         try {
             originalRequest.set(req);
             originalResponse.set(resp);
-            Request request = new ServletRequest(req);
+            Request request = new ServletRequest(req, servletContext);
             Response response = new ServletResponse(resp);
             httpManager.process(request, response);
         } finally {
@@ -114,14 +120,17 @@ public class SpringAwareMiltonServlet implements Servlet{
         }
     }
 
+    @Override
     public String getServletInfo() {
         return "SpringAwareMiltonServlet";
     }
 
+    @Override
     public ServletConfig getServletConfig() {
         return config;
     }
 
+    @Override
     public void destroy() {
         
     }

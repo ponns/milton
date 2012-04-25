@@ -4,7 +4,7 @@ import com.bradmcevoy.http.GetableResource;
 import com.bradmcevoy.http.Range;
 import com.bradmcevoy.http.Request;
 import com.bradmcevoy.http.Response;
-import com.ettrema.http.entity.PartialEntity;
+import com.bradmcevoy.http.entity.PartialEntity;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
 import com.bradmcevoy.http.exceptions.NotFoundException;

@@ -13,9 +13,9 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import com.ettrema.http.entity.PartialEntity;
 import org.apache.commons.lang.StringUtils;
 import com.bradmcevoy.http.Range;
+import com.bradmcevoy.http.entity.PartialEntity;
 import com.bradmcevoy.io.StreamUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

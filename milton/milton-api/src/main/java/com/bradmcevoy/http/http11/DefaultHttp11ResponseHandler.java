@@ -2,8 +2,8 @@ package com.bradmcevoy.http.http11;
 
 import com.bradmcevoy.http.*;
 import com.bradmcevoy.http.Response.Status;
-import com.ettrema.http.entity.BufferingGetableResourceEntity;
-import com.ettrema.http.entity.GetableResourceEntity;
+import com.bradmcevoy.http.entity.BufferingGetableResourceEntity;
+import com.bradmcevoy.http.entity.GetableResourceEntity;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import java.util.Date;
 import java.util.List;
@@ -331,10 +331,12 @@ public class DefaultHttp11ResponseHandler implements Http11ResponseHandler, Buff
 		this.maxMemorySize = maxMemorySize;
 	}
 
+	@Override
 	public BUFFERING getBuffering() {
 		return buffering;
 	}
 
+	@Override
 	public void setBuffering(BUFFERING buffering) {
 		this.buffering = buffering;
 	}

@@ -1,6 +1,6 @@
 package com.bradmcevoy.http.values;
 
-import com.bradmcevoy.http.AccessControlledResource.Priviledge;
+import com.ettrema.http.AccessControlledResource.Priviledge;
 import com.bradmcevoy.http.XmlWriter;
 import com.bradmcevoy.http.XmlWriter.Element;
 import com.bradmcevoy.http.webdav.WebDavProtocol;

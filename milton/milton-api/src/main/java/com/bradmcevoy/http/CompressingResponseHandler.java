@@ -1,7 +1,7 @@
 package com.bradmcevoy.http;
 
-import com.ettrema.http.entity.CompressedResourceEntity;
-import com.ettrema.http.entity.InputStreamEntity;
+import com.bradmcevoy.http.entity.CompressedResourceEntity;
+import com.bradmcevoy.http.entity.InputStreamEntity;
 import com.bradmcevoy.http.exceptions.NotFoundException;
 import com.bradmcevoy.http.http11.DefaultHttp11ResponseHandler;
 import com.bradmcevoy.http.exceptions.BadRequestException;
