@@ -17,27 +17,24 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class JsonResource implements DigestResource {
 
-    private static final Logger log = LoggerFactory.getLogger( JsonResource.class );
-
+    private static final Logger log = LoggerFactory.getLogger(JsonResource.class);
     private final Resource wrappedResource;
     private final String name;
     private final Long maxAgeSecs;
 
     public abstract Method applicableMethod();
 
-    public JsonResource( Resource wrappedResource, String name, Long maxAgeSecs ) {
+    public JsonResource(Resource wrappedResource, String name, Long maxAgeSecs) {
         this.wrappedResource = wrappedResource;
         this.name = name;
         this.maxAgeSecs = maxAgeSecs;
     }
 
-
-
-    public Long getMaxAgeSeconds( Auth auth ) {
+    public Long getMaxAgeSeconds(Auth auth) {
         return maxAgeSecs;
     }
 
-    public String getContentType( String accepts ) {
+    public String getContentType(String accepts) {
         String s = "application/x-javascript; charset=utf-8";
         return s;
         //return "application/json";
@@ -47,54 +44,50 @@ public abstract class JsonResource implements DigestResource {
         return null;
     }
 
-	@Override
+    @Override
     public String getUniqueId() {
         return null;
     }
 
-	@Override
+    @Override
     public String getName() {
         return name;
     }
 
-	@Override
-    public Object authenticate( String user, String password ) {
-        if( log.isDebugEnabled()) {
-            log.debug( "authenticate: " + user);
+    @Override
+    public Object authenticate(String user, String password) {
+        if (log.isDebugEnabled()) {
+            log.debug("authenticate: " + user);
         }
-        Object o = wrappedResource.authenticate( user, password );
-        if( log.isDebugEnabled()) {
-            if( o == null ) {
-                log.debug( "authentication failed on wrapped resource of type: " + wrappedResource.getClass());
+        Object o = wrappedResource.authenticate(user, password);
+        if (log.isDebugEnabled()) {
+            if (o == null) {
+                log.debug("authentication failed on wrapped resource of type: " + wrappedResource.getClass());
             }
         }
         return o;
     }
 
-	@Override
-    public Object authenticate( DigestResponse digestRequest ) {
-        if( wrappedResource instanceof DigestResource) {
-            return ((DigestResource)wrappedResource).authenticate( digestRequest );
+    @Override
+    public Object authenticate(DigestResponse digestRequest) {
+        if (wrappedResource instanceof DigestResource) {
+            return ((DigestResource) wrappedResource).authenticate(digestRequest);
         } else {
             return null;
         }
     }
 
-	@Override
+    @Override
     public boolean isDigestAllowed() {
         return wrappedResource instanceof DigestResource;
     }
 
-
-
-
-
-	@Override
-    public boolean authorise( Request request, Method method, Auth auth ) {
-        boolean b = wrappedResource.authorise( request, applicableMethod(), auth );
-        if( log.isDebugEnabled()) {
-            if( !b ) {
-                log.trace( "authorise failed on wrapped resource of type: " + wrappedResource.getClass());
+    @Override
+    public boolean authorise(Request request, Method method, Auth auth) {
+        boolean b = wrappedResource.authorise(request, applicableMethod(), auth);
+        if (log.isDebugEnabled()) {
+            if (!b) {
+                log.trace("authorise failed on wrapped resource of type: " + wrappedResource.getClass());
             } else {
                 log.trace("all ok");
             }
@@ -102,24 +95,22 @@ public abstract class JsonResource implements DigestResource {
         return b;
     }
 
-	@Override
+    @Override
     public String getRealm() {
         return wrappedResource.getRealm();
     }
 
-	@Override
+    @Override
     public Date getModifiedDate() {
         return null;
     }
 
-	@Override
-    public String checkRedirect( Request request ) {
+    @Override
+    public String checkRedirect(Request request) {
         return null;
     }
 
-	public Resource getWrappedResource() {
-		return wrappedResource;
-	}
-	
-	
+    public Resource getWrappedResource() {
+        return wrappedResource;
+    }
 }

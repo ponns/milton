@@ -19,10 +19,7 @@ public class DigestHelper {
     public DigestHelper(NonceProvider nonceProvider) {
         this.nonceProvider = nonceProvider;
     }
-
-    
-    
-        
+                
     public DigestResponse calculateResponse( Auth auth, String expectedRealm, Method method ) {
         // Check all required parameters were supplied (ie RFC 2069)
         if( ( auth.getUser() == null ) || ( auth.getRealm() == null ) || ( auth.getNonce() == null ) || ( auth.getUri() == null ) ) {
