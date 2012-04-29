@@ -211,8 +211,15 @@ public class FsDirectoryResource extends FsResource implements MakeCollectionabl
     }
 
     private String buildHref(String uri, String name) {
+        /* TODO: Don't know why this has to be the request's absolute URL and the comment
+        doesn't help either. The HttpManager global variables are no longer available in
+        sendContent(), as it might be called after the call left HttpManager.
+
         // hmm, we're ignoring the path passed in uri. Dodgy...
         String abUrl = HttpManager.request().getAbsoluteUrl();
+        */
+        String abUrl = uri;
+
         if (!abUrl.endsWith("/")) {
             abUrl += "/";
         }

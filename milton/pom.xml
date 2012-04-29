@@ -45,7 +45,8 @@
 		<module>milton-zsync</module>
 		<module>milton-ldap</module>
 		<module>milton-proxy</module>
-		
+        <module>milton-restlet</module>
+
         <!--
         <module>milton-filesystem-test</module>
         <module>milton-test</module>
@@ -168,12 +169,13 @@
         <repository>
             <id>ettrema-repo</id>
             <url>http://www.ettrema.com/maven2</url>
-        </repository>
+        </repository> 
+         <!--		
         <repository>
-            <!-- needed for java2html -->
             <id>mvnrepository.com</id>
             <name>mvnrepository.com</name>
             <url>http://www.mvnrepository.com/artifacts</url>
         </repository>
+-->		
     </repositories>
 </project>

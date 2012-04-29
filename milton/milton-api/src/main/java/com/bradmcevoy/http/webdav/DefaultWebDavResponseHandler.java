@@ -9,7 +9,8 @@ import com.bradmcevoy.http.Resource;
 import com.bradmcevoy.http.Response;
 import com.bradmcevoy.http.Response.Status;
 import com.bradmcevoy.http.Utils;
-import com.bradmcevoy.http.XmlWriter;
+import com.bradmcevoy.http.entity.ByteArrayEntity;
+import com.bradmcevoy.http.entity.MultiStatusEntity;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
 import com.bradmcevoy.http.exceptions.NotFoundException;
@@ -19,7 +20,6 @@ import com.bradmcevoy.http.http11.DefaultHttp11ResponseHandler.BUFFERING;
 import com.bradmcevoy.http.http11.Http11ResponseHandler;
 import com.bradmcevoy.http.values.ValueWriters;
 import com.bradmcevoy.http.quota.StorageChecker.StorageErrorReason;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -94,21 +94,7 @@ public class DefaultWebDavResponseHandler implements WebDavResponseHandler, Buff
         List<String> supportedLevels = resourceTypeHelper.getSupportedLevels( resource );
         String s = Utils.toCsv( supportedLevels );
         response.setDavHeader( s );
-		
-
-        XmlWriter writer = new XmlWriter( response.getOutputStream() );
-        writer.writeXMLHeader();
-        writer.open( "multistatus xmlns:D" + "=\"" + WebDavProtocol.NS_DAV + ":\"" ); // only single namespace for this method
-        writer.newLine();
-        for( HrefStatus status : statii ) {
-            XmlWriter.Element elResponse = writer.begin( "response" ).open();
-            writer.writeProperty( "", "href", status.href );
-            writer.writeProperty( "", "status", status.status.code + "" );
-            elResponse.close();
-        }
-        writer.close( "multistatus" );
-        writer.flush();
-
+        response.setEntity(new MultiStatusEntity(statii));
     }
 
 	@Override
@@ -221,11 +207,7 @@ public class DefaultWebDavResponseHandler implements WebDavResponseHandler, Buff
             throw new RuntimeException( ex );
         }
         response.setContentLengthHeader( (long) arr.length );
-        try {
-            response.getOutputStream().write( arr );
-        } catch( IOException ex ) {
-            throw new RuntimeException( ex );
-        }
+        response.setEntity(new ByteArrayEntity(arr));
     }
 
 	@Override
