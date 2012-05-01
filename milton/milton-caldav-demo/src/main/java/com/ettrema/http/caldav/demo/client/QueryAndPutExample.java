@@ -68,7 +68,7 @@ public class QueryAndPutExample {
     private void query() throws IOException, HttpException, NotAuthorizedException, BadRequestException {                
         List<? extends Resource> children = folder.children();
         System.out.println("------ Query: " + folder.href() + " --------");
-        for( Resource r : folder.children() ) {
+        for( Resource r : children ) {
             System.out.println("     Resource: " + r.name + " " + r.getModifiedDate() + " - " + r.getClass());
         }
     }
