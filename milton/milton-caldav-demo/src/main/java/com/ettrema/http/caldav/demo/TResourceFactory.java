@@ -123,7 +123,7 @@ public class TResourceFactory implements ResourceFactory {
         return null;
     }
 
-    private static String createICalData() {
+    public static String createICalData() {
         Calendar cal = Calendar.getInstance();
 
         String start = format(cal);
