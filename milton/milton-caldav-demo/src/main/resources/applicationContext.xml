@@ -105,13 +105,14 @@
 		<constructor-arg ref="wellknown.resource.factory" />
 		<constructor-arg ref="response.handler" />
 		<constructor-arg ref="protocol.handlers" />
-
+<!-- Note that I believe that this causes iCal5 to not work correctly: BM -->                
+<!--
 		<property name="filters">
 			<list>
 				<ref bean="debug.filter" />
 			</list>
 		</property>
-
+-->
 	</bean>
 
     <!-- If added to the http manager, this filter will output request and responses
