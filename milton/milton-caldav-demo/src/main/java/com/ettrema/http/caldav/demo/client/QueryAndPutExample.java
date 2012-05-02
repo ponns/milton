@@ -79,7 +79,7 @@ public class QueryAndPutExample {
         ByteArrayInputStream bin = new ByteArrayInputStream(arr);
         String newName = UUID.randomUUID().toString() + ".ics"; // just any unique name
         System.out.println("------ PUT Event to folder: " + folder.href() + " --------");
-        folder.upload(newName, bin, arr.length, null);        
+        folder.upload(newName, bin, (long)arr.length, "text/calendar", null);        
     }
     
     
