@@ -111,6 +111,12 @@
             <groupId>com.ettrema</groupId>
             <artifactId>geroa-server</artifactId>
             <version>1.5</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>aspirin-core</artifactId>
+                    <groupId>org.masukomi</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

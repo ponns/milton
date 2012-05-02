@@ -77,7 +77,7 @@ public class QueryAndPutExample {
         String icalData = TResourceFactory.createICalData();
         byte[] arr = icalData.getBytes();
         ByteArrayInputStream bin = new ByteArrayInputStream(arr);
-        String newName = UUID.randomUUID().toString(); // just any unique name
+        String newName = UUID.randomUUID().toString() + ".ics"; // just any unique name
         System.out.println("------ PUT Event to folder: " + folder.href() + " --------");
         folder.upload(newName, bin, arr.length, null);        
     }
