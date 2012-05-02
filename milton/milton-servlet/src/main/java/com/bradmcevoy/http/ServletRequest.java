@@ -50,11 +50,11 @@ public class ServletRequest extends AbstractRequest {
     public static HttpServletRequest getRequest() {
         return tlRequest.get();
     }
-    
+
     public static ServletContext getTLServletContext() {
         return tlServletContext.get();
     }
-    
+
     static void clearThreadLocals() {
         tlRequest.remove();
         tlServletContext.remove();
@@ -130,12 +130,11 @@ public class ServletRequest extends AbstractRequest {
     public void parseRequestParameters(Map<String, String> params, Map<String, com.bradmcevoy.http.FileItem> files) throws RequestParseException {
         try {
             if (isMultiPart()) {
-                log.trace("isMultiPart");
+                log.trace("parseRequestParameters: isMultiPart");
                 UploadListener listener = new UploadListener();
                 MonitoredDiskFileItemFactory factory = new MonitoredDiskFileItemFactory(listener);
                 ServletFileUpload upload = new ServletFileUpload(factory);
                 List items = upload.parseRequest(request);
-                log.trace("upload items: " + items.size());
 
                 parseQueryString(params);
 
@@ -144,12 +143,19 @@ public class ServletRequest extends AbstractRequest {
                     if (item.isFormField()) {
                         params.put(item.getFieldName(), item.getString());
                     } else {
-                        files.put(item.getFieldName(), new FileItemWrapper(item));
+                        // See http://jira.ettrema.com:8080/browse/MIL-118 - ServletRequest#parseRequestParameters overwrites multiple file uploads when using input type="file" multiple="multiple"                        
+                        String itemKey = item.getFieldName();
+                        if (files.containsKey(itemKey)) {
+                            int count = 1;
+                            while (files.containsKey(itemKey + count)) {
+                                count++;
+                            }
+                            itemKey = itemKey + count;
+                        }
+                        files.put(itemKey, new FileItemWrapper(item));
                     }
                 }
-                log.trace("files: " + files.size());
             } else {
-                log.trace("is not MultiPart");
                 for (Enumeration en = request.getParameterNames(); en.hasMoreElements();) {
                     String nm = (String) en.nextElement();
                     String val = request.getParameter(nm);
@@ -251,6 +257,4 @@ public class ServletRequest extends AbstractRequest {
     public ServletContext getServletContext() {
         return servletContext;
     }
-    
-    
 }
