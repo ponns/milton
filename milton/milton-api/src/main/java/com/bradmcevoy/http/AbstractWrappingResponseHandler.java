@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
+import com.bradmcevoy.http.http11.Bufferable;
+import com.bradmcevoy.http.http11.DefaultHttp11ResponseHandler.BUFFERING;
 import com.bradmcevoy.http.webdav.PropFindResponse;
 import com.bradmcevoy.http.webdav.WebDavResponseHandler;
 
@@ -19,133 +21,153 @@ import com.bradmcevoy.http.webdav.WebDavResponseHandler;
  *
  * @author brad
  */
-public abstract class AbstractWrappingResponseHandler implements WebDavResponseHandler {
+public abstract class AbstractWrappingResponseHandler implements WebDavResponseHandler, Bufferable {
 
-    private static final Logger log = LoggerFactory.getLogger( AbstractWrappingResponseHandler.class );
-    /**
-     * The underlying respond handler which takes care of actually generating
-     * content
-     */
-    protected WebDavResponseHandler wrapped;
+	private static final Logger log = LoggerFactory.getLogger(AbstractWrappingResponseHandler.class);
+	/**
+	 * The underlying respond handler which takes care of actually generating
+	 * content
+	 */
+	protected WebDavResponseHandler wrapped;
 
-    public AbstractWrappingResponseHandler() {
-    }
+	public AbstractWrappingResponseHandler() {
+	}
 
-    public AbstractWrappingResponseHandler( WebDavResponseHandler wrapped ) {
-        this.wrapped = wrapped;
-    }
-
-	@Override
-    public String generateEtag( Resource r ) {
-        return wrapped.generateEtag( r );
-    }
+	public AbstractWrappingResponseHandler(WebDavResponseHandler wrapped) {
+		this.wrapped = wrapped;
+	}
 
 	@Override
-    public void respondContent( Resource resource, Response response, Request request, Map<String, String> params ) throws NotAuthorizedException, BadRequestException, NotFoundException {
-        wrapped.respondContent( resource, response, request, params );
-    }
-
-    public void setWrapped( WebDavResponseHandler wrapped ) {
-        this.wrapped = wrapped;
-    }
-
-    public WebDavResponseHandler getWrapped() {
-        return wrapped;
-    }
+	public BUFFERING getBuffering() {
+		if (wrapped instanceof Bufferable) {
+			Bufferable b = (Bufferable) wrapped;
+			return b.getBuffering();
+		} else {
+			return null;
+		}
+	}
 
 	@Override
-    public void respondNoContent( Resource resource, Response response, Request request ) {
-        wrapped.respondNoContent( resource, response, request );
-    }
+	public void setBuffering(BUFFERING buffering) {
+		if (wrapped instanceof Bufferable) {
+			Bufferable b = (Bufferable) wrapped;
+			b.setBuffering(buffering);
+		} else {
+			throw new IllegalStateException("The wrapped response handle is not Bufferable. Is a: " + wrapped.getClass());
+		}
+	}
 
 	@Override
-    public void respondPartialContent( GetableResource resource, Response response, Request request, Map<String, String> params, Range range ) throws NotAuthorizedException, BadRequestException, NotFoundException {
-        wrapped.respondPartialContent( resource, response, request, params, range );
-    }
+	public String generateEtag(Resource r) {
+		return wrapped.generateEtag(r);
+	}
 
 	@Override
-    public void respondCreated( Resource resource, Response response, Request request ) {
-        wrapped.respondCreated( resource, response, request );
-    }
+	public void respondContent(Resource resource, Response response, Request request, Map<String, String> params) throws NotAuthorizedException, BadRequestException, NotFoundException {
+		wrapped.respondContent(resource, response, request, params);
+	}
 
-    public void respondUnauthorised( Resource resource, Response response, Request request ) {
-        wrapped.respondUnauthorised( resource, response, request );
-    }
+	public void setWrapped(WebDavResponseHandler wrapped) {
+		this.wrapped = wrapped;
+	}
 
-    public void respondMethodNotImplemented( Resource resource, Response response, Request request ) {
-        wrapped.respondMethodNotImplemented( resource, response, request );
-    }
+	public WebDavResponseHandler getWrapped() {
+		return wrapped;
+	}
 
-    public void respondMethodNotAllowed( Resource res, Response response, Request request ) {
-        wrapped.respondMethodNotAllowed( res, response, request );
-    }
+	@Override
+	public void respondNoContent(Resource resource, Response response, Request request) {
+		wrapped.respondNoContent(resource, response, request);
+	}
 
-    public void respondConflict( Resource resource, Response response, Request request, String message ) {
-        wrapped.respondConflict( resource, response, request, message );
-    }
+	@Override
+	public void respondPartialContent(GetableResource resource, Response response, Request request, Map<String, String> params, Range range) throws NotAuthorizedException, BadRequestException, NotFoundException {
+		wrapped.respondPartialContent(resource, response, request, params, range);
+	}
 
-    public void respondRedirect( Response response, Request request, String redirectUrl ) {
-        wrapped.respondRedirect( response, request, redirectUrl );
-    }
+	@Override
+	public void respondCreated(Resource resource, Response response, Request request) {
+		wrapped.respondCreated(resource, response, request);
+	}
 
-    public void responseMultiStatus( Resource resource, Response response, Request request, List<HrefStatus> statii ) {
-        wrapped.responseMultiStatus( resource, response, request, statii );
-    }
+	public void respondUnauthorised(Resource resource, Response response, Request request) {
+		wrapped.respondUnauthorised(resource, response, request);
+	}
 
-    public void respondNotModified( GetableResource resource, Response response, Request request ) {
-        log.trace( "respondNotModified" );
-        wrapped.respondNotModified( resource, response, request );
-    }
+	public void respondMethodNotImplemented(Resource resource, Response response, Request request) {
+		wrapped.respondMethodNotImplemented(resource, response, request);
+	}
 
-    public void respondNotFound( Response response, Request request ) {
-        wrapped.respondNotFound( response, request );
-    }
+	public void respondMethodNotAllowed(Resource res, Response response, Request request) {
+		wrapped.respondMethodNotAllowed(res, response, request);
+	}
 
-    public void respondWithOptions( Resource resource, Response response, Request request, List<String> methodsAllowed ) {
-        wrapped.respondWithOptions( resource, response, request, methodsAllowed );
-    }
+	public void respondConflict(Resource resource, Response response, Request request, String message) {
+		wrapped.respondConflict(resource, response, request, message);
+	}
 
-    public void respondHead( Resource resource, Response response, Request request ) {
-        wrapped.respondHead( resource, response, request );
-    }
+	public void respondRedirect(Response response, Request request, String redirectUrl) {
+		wrapped.respondRedirect(response, request, redirectUrl);
+	}
 
-    public void respondExpectationFailed( Response response, Request request ) {
-        wrapped.respondExpectationFailed( response, request );
-    }
+	public void responseMultiStatus(Resource resource, Response response, Request request, List<HrefStatus> statii) {
+		wrapped.responseMultiStatus(resource, response, request, statii);
+	}
 
-    public void respondBadRequest( Resource resource, Response response, Request request ) {
-        wrapped.respondBadRequest( resource, response, request );
-    }
+	public void respondNotModified(GetableResource resource, Response response, Request request) {
+		log.trace("respondNotModified");
+		wrapped.respondNotModified(resource, response, request);
+	}
 
-    public void respondForbidden( Resource resource, Response response, Request request ) {
-        wrapped.respondForbidden( resource, response, request );
-    }
+	public void respondNotFound(Response response, Request request) {
+		wrapped.respondNotFound(response, request);
+	}
 
-    public void respondDeleteFailed( Request request, Response response, Resource resource, Status status ) {
-        wrapped.respondDeleteFailed( request, response, resource, status );
-    }
+	public void respondWithOptions(Resource resource, Response response, Request request, List<String> methodsAllowed) {
+		wrapped.respondWithOptions(resource, response, request, methodsAllowed);
+	}
 
-    public void respondPropFind( List<PropFindResponse> propFindResponses, Response response, Request request, PropFindableResource pfr ) {
-        wrapped.respondPropFind( propFindResponses, response, request, pfr );
-    }
+	public void respondHead(Resource resource, Response response, Request request) {
+		wrapped.respondHead(resource, response, request);
+	}
 
-    public void respondPropFind( List<PropFindResponse> propFindResponses, Response response, Request request, Resource r ) {
-        wrapped.respondPropFind( propFindResponses, response, request, r );
-    }
+	public void respondExpectationFailed(Response response, Request request) {
+		wrapped.respondExpectationFailed(response, request);
+	}
 
-    public void respondServerError( Request request, Response response, String reason ) {
-        wrapped.respondServerError( request, response, reason );
-    }
+	public void respondBadRequest(Resource resource, Response response, Request request) {
+		wrapped.respondBadRequest(resource, response, request);
+	}
 
-    public void respondInsufficientStorage( Request request, Response response, StorageErrorReason storageErrorReason ) {
-        wrapped.respondInsufficientStorage( request, response, storageErrorReason );
-    }
+	public void respondForbidden(Resource resource, Response response, Request request) {
+		wrapped.respondForbidden(resource, response, request);
+	}
 
-    public void respondLocked( Request request, Response response, Resource existingResource ) {
-        wrapped.respondLocked( request, response, existingResource );
-    }
+	public void respondDeleteFailed(Request request, Response response, Resource resource, Status status) {
+		wrapped.respondDeleteFailed(request, response, resource, status);
+	}
 
-    public void respondPreconditionFailed( Request request, Response response, Resource resource ) {
-        wrapped.respondPreconditionFailed( request, response, resource );
-    }
+	public void respondPropFind(List<PropFindResponse> propFindResponses, Response response, Request request, PropFindableResource pfr) {
+		wrapped.respondPropFind(propFindResponses, response, request, pfr);
+	}
+
+	public void respondPropFind(List<PropFindResponse> propFindResponses, Response response, Request request, Resource r) {
+		wrapped.respondPropFind(propFindResponses, response, request, r);
+	}
+
+	public void respondServerError(Request request, Response response, String reason) {
+		wrapped.respondServerError(request, response, reason);
+	}
+
+	public void respondInsufficientStorage(Request request, Response response, StorageErrorReason storageErrorReason) {
+		wrapped.respondInsufficientStorage(request, response, storageErrorReason);
+	}
+
+	public void respondLocked(Request request, Response response, Resource existingResource) {
+		wrapped.respondLocked(request, response, existingResource);
+	}
+
+	public void respondPreconditionFailed(Request request, Response response, Resource resource) {
+		wrapped.respondPreconditionFailed(request, response, resource);
+	}
 }
