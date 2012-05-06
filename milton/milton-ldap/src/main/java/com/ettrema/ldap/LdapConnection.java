@@ -52,55 +52,54 @@ import org.slf4j.LoggerFactory;
  */
 public class LdapConnection extends Thread {
 
-	private static final Logger log = LoggerFactory.getLogger(LdapConnection.class);
-
-	/**
-	 * Sasl server for DIGEST-MD5 authentication
-	 */
-	protected SaslServer saslServer;
-	/**
-	 * raw connection inputStream
-	 */
-	protected BufferedInputStream is;
-	private final UserFactory userFactory;
-	private final LdapPropertyMapper propertyMapper;
-	private final LdapResponseHandler responseHandler;
-	private final LdapParser ldapParser;
+    private static final Logger log = LoggerFactory.getLogger(LdapConnection.class);
+    /**
+     * Sasl server for DIGEST-MD5 authentication
+     */
+    protected SaslServer saslServer;
+    /**
+     * raw connection inputStream
+     */
+    protected BufferedInputStream is;
+    private final UserFactory userFactory;
+    private final LdapPropertyMapper propertyMapper;
+    private final LdapResponseHandler responseHandler;
+    private final LdapParser ldapParser;
     private final Socket client;
-	private final SearchManager searchManager;
-	
-	private LdapPrincipal user;
+    private final SearchManager searchManager;
+    private final LdapTransactionManager txManager;
+    private LdapPrincipal user;
     private LineReaderInputStream in;
     private final OutputStream os;
     // user name and password initialized through connection
     private String userName;
-	private String password;
-	protected static final byte[] EMPTY_BYTE_ARRAY = new byte[0];	
+    private String password;
+    protected static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
-	/**
-	 * Initialize the streams and start the thread.
-	 *
-	 * @param clientSocket LDAP client socket
-	 */
-	public LdapConnection(Socket clientSocket, UserFactory userSessionFactory, List<PropertySource> propertySources, SearchManager searchManager) {
+    /**
+     * Initialize the streams and start the thread.
+     *
+     * @param clientSocket LDAP client socket
+     */
+    public LdapConnection(Socket clientSocket, UserFactory userSessionFactory, List<PropertySource> propertySources, SearchManager searchManager, LdapTransactionManager txManager) {
         super(LdapConnection.class.getSimpleName() + '-' + clientSocket.getPort());
-		this.searchManager = searchManager;
+        this.searchManager = searchManager;
         this.client = clientSocket;
-        setDaemon(true);		
-		this.userFactory = userSessionFactory;
-		this.propertyMapper = new LdapPropertyMapper(new PropFindPropertyBuilder(propertySources));
-		try {
-			is = new BufferedInputStream(client.getInputStream());
-			os = new BufferedOutputStream(client.getOutputStream());
-		} catch (IOException e) {
-			close();
-			throw new RuntimeException(e);
-		}
-		responseHandler = new LdapResponseHandler(client, os);
-		ldapParser = new LdapParser(propertyMapper, responseHandler, userFactory);
-		System.out.println("Created LDAP Connection handler");
-	}
-
+        this.txManager = txManager;
+        setDaemon(true);
+        this.userFactory = userSessionFactory;
+        this.propertyMapper = new LdapPropertyMapper(new PropFindPropertyBuilder(propertySources));
+        try {
+            is = new BufferedInputStream(client.getInputStream());
+            os = new BufferedOutputStream(client.getOutputStream());
+        } catch (IOException e) {
+            close();
+            throw new RuntimeException(e);
+        }
+        responseHandler = new LdapResponseHandler(client, os);
+        ldapParser = new LdapParser(propertyMapper, responseHandler, userFactory);
+        System.out.println("Created LDAP Connection handler");
+    }
 
     @Override
     public void run() {
@@ -186,25 +185,46 @@ public class LdapConnection extends Thread {
                 handleRequest(inbuf, offset);
             }
 
-		} catch (SocketException e) {
-			log.debug("LOG_CONNECTION_CLOSED");
-		} catch (SocketTimeoutException e) {
-			log.debug("LOG_CLOSE_CONNECTION_ON_TIMEOUT");
-		} catch (Exception e) {
-			log.error("err", e);
-			try {
-				responseHandler.sendErr(0, Ldap.LDAP_REP_BIND, e);
-			} catch (IOException e2) {
-				log.warn("LOG_EXCEPTION_SENDING_ERROR_TO_CLIENT", e2);
-			}
-		} finally {
-			searchManager.cancelAllSearches(this);
-			close();
-		}
-	}
+        } catch (SocketException e) {
+            log.debug("LOG_CONNECTION_CLOSED");
+        } catch (SocketTimeoutException e) {
+            log.debug("LOG_CLOSE_CONNECTION_ON_TIMEOUT");
+        } catch (Exception e) {
+            log.error("err", e);
+            try {
+                responseHandler.sendErr(0, Ldap.LDAP_REP_BIND, e);
+            } catch (IOException e2) {
+                log.warn("LOG_EXCEPTION_SENDING_ERROR_TO_CLIENT", e2);
+            }
+        } finally {
+            searchManager.cancelAllSearches(this);
+            close();
+        }
+    }
 
+    protected void handleRequest(final byte[] inbuf, final int offset) throws IOException {
+        try {
+            txManager.tx(new Runnable() {
 
-    protected void handleRequest(byte[] inbuf, int offset) throws IOException {
+                @Override
+                public void run() {
+                    try {
+                        _handleRequest(inbuf, offset);
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            });
+        } catch (Throwable e) {
+            if (e.getCause() instanceof IOException) {
+                throw (IOException) e.getCause();
+            } else {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    protected void _handleRequest(byte[] inbuf, int offset) throws IOException {
         //dumpBer(inbuf, offset);
         BerDecoder reqBer = new BerDecoder(inbuf, 0, offset);
         int currentMessageId = 0;
@@ -213,134 +233,136 @@ public class LdapConnection extends Thread {
             currentMessageId = reqBer.parseInt();
             int requestOperation = reqBer.peekByte();
 
-			if (requestOperation == Ldap.LDAP_REQ_BIND) {
-				reqBer.parseSeq(null);
-				responseHandler.setVersion( reqBer.parseInt() );
-				userName = reqBer.parseString(responseHandler.isLdapV3());
-				if (reqBer.peekByte() == (Ber.ASN_CONTEXT | Ber.ASN_CONSTRUCTOR | 3)) {
-					// SASL authentication
-					reqBer.parseSeq(null);
-					// Get mechanism, usually DIGEST-MD5
-					String mechanism = reqBer.parseString(responseHandler.isLdapV3());
+            if (requestOperation == Ldap.LDAP_REQ_BIND) {
+                reqBer.parseSeq(null);
+                responseHandler.setVersion(reqBer.parseInt());
+                userName = reqBer.parseString(responseHandler.isLdapV3());
+                if (reqBer.peekByte() == (Ber.ASN_CONTEXT | Ber.ASN_CONSTRUCTOR | 3)) {
+                    // SASL authentication
+                    reqBer.parseSeq(null);
+                    // Get mechanism, usually DIGEST-MD5
+                    String mechanism = reqBer.parseString(responseHandler.isLdapV3());
 
                     byte[] serverResponse;
                     CallbackHandler callbackHandler = new CallbackHandler() {
 
-						@Override
-						public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
-							// look for username in callbacks
-							for (Callback callback : callbacks) {
-								if (callback instanceof NameCallback) {
-									userName = ((NameCallback) callback).getDefaultName();
-									// get password from session pool
-									password = userFactory.getUserPassword(userName);
-								}
-							}
-							// handle other callbacks
-							for (Callback callback : callbacks) {
-								if (callback instanceof AuthorizeCallback) {
-									((AuthorizeCallback) callback).setAuthorized(true);
-								} else if (callback instanceof PasswordCallback) {
-									if (password != null) {
-										((PasswordCallback) callback).setPassword(password.toCharArray());
-									}
-								}
-							}
-						}
-					};
-					int status;
-					if (reqBer.bytesLeft() > 0 && saslServer != null) {
-						byte[] clientResponse = reqBer.parseOctetString(Ber.ASN_OCTET_STR, null);
-						serverResponse = saslServer.evaluateResponse(clientResponse);
-						status = Ldap.LDAP_SUCCESS;
+                        @Override
+                        public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
+                            // look for username in callbacks
+                            for (Callback callback : callbacks) {
+                                if (callback instanceof NameCallback) {
+                                    userName = ((NameCallback) callback).getDefaultName();
+                                    // get password from session pool
+                                    password = userFactory.getUserPassword(userName);
+                                }
+                            }
+                            // handle other callbacks
+                            for (Callback callback : callbacks) {
+                                if (callback instanceof AuthorizeCallback) {
+                                    ((AuthorizeCallback) callback).setAuthorized(true);
+                                } else if (callback instanceof PasswordCallback) {
+                                    if (password != null) {
+                                        ((PasswordCallback) callback).setPassword(password.toCharArray());
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    int status;
+                    if (reqBer.bytesLeft() > 0 && saslServer != null) {
+                        byte[] clientResponse = reqBer.parseOctetString(Ber.ASN_OCTET_STR, null);
+                        serverResponse = saslServer.evaluateResponse(clientResponse);
+                        status = Ldap.LDAP_SUCCESS;
 
                         LogUtils.debug(log, "LOG_LDAP_REQ_BIND_USER", currentMessageId, userName);
                         user = userFactory.getUser(userName, password);
                         LogUtils.debug(log, "LOG_LDAP_REQ_BIND_SUCCESS");
 
-					} else {
-						Map<String, String> properties = new HashMap<String, String>();
-						properties.put("javax.security.sasl.qop", "auth,auth-int");
-						saslServer = Sasl.createSaslServer(mechanism, "ldap", client.getLocalAddress().getHostAddress(), properties, callbackHandler);
-						serverResponse = saslServer.evaluateResponse(EMPTY_BYTE_ARRAY);
-						status = Ldap.LDAP_SASL_BIND_IN_PROGRESS;
-					}
-					responseHandler.sendBindResponse(currentMessageId, status, serverResponse);
+                    } else {
+                        Map<String, String> properties = new HashMap<String, String>();
+                        properties.put("javax.security.sasl.qop", "auth,auth-int");
+                        saslServer = Sasl.createSaslServer(mechanism, "ldap", client.getLocalAddress().getHostAddress(), properties, callbackHandler);
+                        serverResponse = saslServer.evaluateResponse(EMPTY_BYTE_ARRAY);
+                        status = Ldap.LDAP_SASL_BIND_IN_PROGRESS;
+                    }
+                    responseHandler.sendBindResponse(currentMessageId, status, serverResponse);
 
-				} else {
-					password = reqBer.parseStringWithTag(Ber.ASN_CONTEXT, responseHandler.isLdapV3(), null);
+                } else {
+                    password = reqBer.parseStringWithTag(Ber.ASN_CONTEXT, responseHandler.isLdapV3(), null);
 
-					if (userName.length() > 0 && password.length() > 0) {
-						log.debug("LOG_LDAP_REQ_BIND_USER", currentMessageId, userName);
-						try {
-							user = userFactory.getUser(userName, password);
-							LogUtils.debug(log, "LOG_LDAP_REQ_BIND_SUCCESS");
-							responseHandler.sendClient(currentMessageId, Ldap.LDAP_REP_BIND, Ldap.LDAP_SUCCESS, "");
-						} catch (IOException e) {
-							LogUtils.debug(log, "LOG_LDAP_REQ_BIND_INVALID_CREDENTIALS");
-							responseHandler.sendClient(currentMessageId, Ldap.LDAP_REP_BIND, Ldap.LDAP_INVALID_CREDENTIALS, "");
-						}
-					} else {
-						LogUtils.debug(log, "LOG_LDAP_REQ_BIND_ANONYMOUS", currentMessageId);
-						// anonymous bind
-						responseHandler.sendClient(currentMessageId, Ldap.LDAP_REP_BIND, Ldap.LDAP_SUCCESS, "");
-					}
-				}
+                    if (userName.length() > 0 && password.length() > 0) {
+                        log.debug("LOG_LDAP_REQ_BIND_USER", currentMessageId, userName);
+                        try {
+                            user = userFactory.getUser(userName, password);
+                            LogUtils.debug(log, "LOG_LDAP_REQ_BIND_SUCCESS");
+                            responseHandler.sendClient(currentMessageId, Ldap.LDAP_REP_BIND, Ldap.LDAP_SUCCESS, "");
+                        } catch (IOException e) {
+                            LogUtils.debug(log, "LOG_LDAP_REQ_BIND_INVALID_CREDENTIALS");
+                            responseHandler.sendClient(currentMessageId, Ldap.LDAP_REP_BIND, Ldap.LDAP_INVALID_CREDENTIALS, "");
+                        }
+                    } else {
+                        LogUtils.debug(log, "LOG_LDAP_REQ_BIND_ANONYMOUS", currentMessageId);
+                        // anonymous bind
+                        responseHandler.sendClient(currentMessageId, Ldap.LDAP_REP_BIND, Ldap.LDAP_SUCCESS, "");
+                    }
+                }
 
-			} else if (requestOperation == Ldap.LDAP_REQ_UNBIND) {
-				log.debug("LOG_LDAP_REQ_UNBIND", currentMessageId);
-				if (user != null) {
-					user = null;
-				}
-			} else if (requestOperation == Ldap.LDAP_REQ_SEARCH) {
-				reqBer.parseSeq(null);
-				String dn = reqBer.parseString(responseHandler.isLdapV3());
-				int scope = reqBer.parseEnumeration();
-				/*int derefAliases =*/
-				reqBer.parseEnumeration();
-				int sizeLimit = reqBer.parseInt();
-				if (sizeLimit > 100 || sizeLimit == 0) {
-					sizeLimit = 100;
-				}
-				int timelimit = reqBer.parseInt();
-				/*boolean typesOnly =*/
-				reqBer.parseBoolean();
-				LdapFilter ldapFilter = ldapParser.parseFilter(reqBer, user, userName);
-				Set<String> returningAttributes = ldapParser.parseReturningAttributes(reqBer);
-				SearchRunnable searchRunnable = new SearchRunnable(userFactory, propertyMapper , currentMessageId, dn, scope, sizeLimit, timelimit, ldapFilter, returningAttributes, responseHandler, user, searchManager); 
-				if (Ldap.BASE_CONTEXT.equalsIgnoreCase(dn) || Ldap.OD_USER_CONTEXT.equalsIgnoreCase(dn) || Ldap.OD_USER_CONTEXT_LION.equalsIgnoreCase(dn)) {
-					// launch search in a separate thread
-					searchManager.beginAsyncSearch(this, currentMessageId, searchRunnable);
-				} else {
-					// no need to create a separate thread, just run
-					searchManager.search(this, searchRunnable);
-				}
+            } else if (requestOperation == Ldap.LDAP_REQ_UNBIND) {
+                log.debug("LOG_LDAP_REQ_UNBIND", currentMessageId);
+                if (user != null) {
+                    user = null;
+                }
+            } else if (requestOperation == Ldap.LDAP_REQ_SEARCH) {
+                reqBer.parseSeq(null);
+                String dn = reqBer.parseString(responseHandler.isLdapV3());
+                int scope = reqBer.parseEnumeration();
+                /*
+                 * int derefAliases =
+                 */
+                reqBer.parseEnumeration();
+                int sizeLimit = reqBer.parseInt();
+                if (sizeLimit > 100 || sizeLimit == 0) {
+                    sizeLimit = 100;
+                }
+                int timelimit = reqBer.parseInt();
+                /*
+                 * boolean typesOnly =
+                 */
+                reqBer.parseBoolean();
+                LdapFilter ldapFilter = ldapParser.parseFilter(reqBer, user, userName);
+                Set<String> returningAttributes = ldapParser.parseReturningAttributes(reqBer);
+                SearchRunnable searchRunnable = new SearchRunnable(userFactory, propertyMapper, currentMessageId, dn, scope, sizeLimit, timelimit, ldapFilter, returningAttributes, responseHandler, user, searchManager);
+                if (Ldap.BASE_CONTEXT.equalsIgnoreCase(dn) || Ldap.OD_USER_CONTEXT.equalsIgnoreCase(dn) || Ldap.OD_USER_CONTEXT_LION.equalsIgnoreCase(dn)) {
+                    // launch search in a separate thread
+                    searchManager.beginAsyncSearch(this, currentMessageId, searchRunnable);
+                } else {
+                    // no need to create a separate thread, just run
+                    searchManager.search(this, searchRunnable);
+                }
 
-			} else if (requestOperation == Ldap.LDAP_REQ_ABANDON) {
-				searchManager.abandonSearch(this, currentMessageId, reqBer);				
-			} else {
-				LogUtils.debug(log, "LOG_LDAP_UNSUPPORTED_OPERATION", requestOperation);
-				responseHandler.sendClient(currentMessageId, Ldap.LDAP_REP_RESULT, Ldap.LDAP_OTHER, "Unsupported operation");
-			}
-		} catch (IOException e) {
-			responseHandler.dumpBer(inbuf, offset);
-			try {
-				responseHandler.sendErr(currentMessageId, Ldap.LDAP_REP_RESULT, e);
-			} catch (IOException e2) {
-				log.debug("LOG_EXCEPTION_SENDING_ERROR_TO_CLIENT", e2);
-			}
-			throw e;
-		}
-	}
-
-
+            } else if (requestOperation == Ldap.LDAP_REQ_ABANDON) {
+                searchManager.abandonSearch(this, currentMessageId, reqBer);
+            } else {
+                LogUtils.debug(log, "LOG_LDAP_UNSUPPORTED_OPERATION", requestOperation);
+                responseHandler.sendClient(currentMessageId, Ldap.LDAP_REP_RESULT, Ldap.LDAP_OTHER, "Unsupported operation");
+            }
+        } catch (IOException e) {
+            responseHandler.dumpBer(inbuf, offset);
+            try {
+                responseHandler.sendErr(currentMessageId, Ldap.LDAP_REP_RESULT, e);
+            } catch (IOException e2) {
+                log.debug("LOG_EXCEPTION_SENDING_ERROR_TO_CLIENT", e2);
+            }
+            throw e;
+        }
+    }
 
     /**
      * Close client connection, streams and Exchange session .
      */
     public final void close() {
-		IOUtils.closeQuietly(in);
-		IOUtils.closeQuietly(os);
+        IOUtils.closeQuietly(in);
+        IOUtils.closeQuietly(os);
         try {
             client.close();
         } catch (IOException e2) {

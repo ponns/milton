@@ -82,6 +82,7 @@ public class TCalDavPrincipal extends TFolderResource implements CalDavPrincipal
 
     @Override
     public List<LdapContact> searchContacts(Condition condition, int maxCount) {
+        System.out.println("searchContacts: " + condition);
         List<LdapContact> results = new ArrayList<LdapContact>();
         for (Resource rAddressBook : addressBookHome.children) {
             if (rAddressBook instanceof CollectionResource) {

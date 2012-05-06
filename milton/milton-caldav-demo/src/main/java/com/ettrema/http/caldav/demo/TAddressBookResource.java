@@ -24,7 +24,6 @@ public class TAddressBookResource extends TFolderResource implements AddressBook
 
     private static final Logger log = LoggerFactory.getLogger(TCalendarResource.class);
 
-    
     public TAddressBookResource(TFolderResource parent, String name) {
         super(parent, name);
     }
@@ -36,47 +35,45 @@ public class TAddressBookResource extends TFolderResource implements AddressBook
 
     @Override
     public Resource createNew(String newName, InputStream inputStream, Long length, String contentType) throws IOException {
-		try {
-			log.debug("createNew: " + contentType);
-	//        if (contentType.startsWith("text/calendar")) {
-				TContact e = new TContact(this, newName);
-				e.replaceContent(inputStream, length);
-				log.debug("created contact: " + e.name);
-				return e;
-	//        } else {
-	//            throw new RuntimeException("eek");
-	//            //log.debug( "creating a normal resource");
-	//        }
-	//        }
-		} catch (BadRequestException ex) {
-			throw new RuntimeException(ex);
-		} catch (ConflictException ex) {
-			throw new RuntimeException(ex);
-		} catch (NotAuthorizedException ex) {
-			throw new RuntimeException(ex);
-		}
+        try {
+            log.debug("createNew: " + contentType);
+            //        if (contentType.startsWith("text/calendar")) {
+            TContact e = new TContact(this, newName);
+            e.replaceContent(inputStream, length);
+            log.debug("created contact: " + e.name);
+            return e;
+            //        } else {
+            //            throw new RuntimeException("eek");
+            //            //log.debug( "creating a normal resource");
+            //        }
+            //        }
+        } catch (BadRequestException ex) {
+            throw new RuntimeException(ex);
+        } catch (ConflictException ex) {
+            throw new RuntimeException(ex);
+        } catch (NotAuthorizedException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Override
-    public InternationalizedString getDescription(){
+    public InternationalizedString getDescription() {
         return new InternationalizedString("fr-CA", "Adresses de Oliver Daboo");
     }
-    
-    @Override 
-    public void setDescription(InternationalizedString description){
-        
-    }
-    
+
     @Override
-    public Long getMaxResourceSize(){
-        return 102400L; 
+    public void setDescription(InternationalizedString description) {
     }
-    
+
     @Override
-    public AddressDataTypeList getSupportedAddressData(){
+    public Long getMaxResourceSize() {
+        return 102400L;
+    }
+
+    @Override
+    public AddressDataTypeList getSupportedAddressData() {
         AddressDataTypeList supportedAddresses = new AddressDataTypeList();
         supportedAddresses.add(new Pair<String, String>("text/vcard", "3.0"));
         return supportedAddresses;
     }
-
 }

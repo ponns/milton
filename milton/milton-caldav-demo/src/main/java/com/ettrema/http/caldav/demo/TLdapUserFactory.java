@@ -14,51 +14,56 @@ import java.util.List;
  */
 public class TLdapUserFactory implements UserFactory {
 
-	private static org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(TLdapUserFactory.class);
-	private final TResourceFactory resourceFactory;
+    private static org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(TLdapUserFactory.class);
+    private final TResourceFactory resourceFactory;
 
-	public TLdapUserFactory(TResourceFactory resourceFactory) {
-		this.resourceFactory = resourceFactory;
-	}
+    public TLdapUserFactory(TResourceFactory resourceFactory) {
+        this.resourceFactory = resourceFactory;
+    }
 
-	@Override
-	public String getUserPassword(String userName) {
-		TCalDavPrincipal user = TResourceFactory.findUser(userName);
-		if( user == null ) {
-			return null;
-		} else {
-			return user.getPassword();
-		}
-	}
+    @Override
+    public String getUserPassword(String userName) {
+        TCalDavPrincipal user = TResourceFactory.findUser(userName);
+        if (user == null) {
+            return null;
+        } else {
+            return user.getPassword();
+        }
+    }
 
-	@Override
-	public LdapPrincipal getUser(String userName, String password) {
-		TCalDavPrincipal user = TResourceFactory.findUser(userName);
-		if (user.authenticate(password)) {
-			return user;
-		} else {
-			return null;
-		}
-	}
+    @Override
+    public LdapPrincipal getUser(String userName, String password) {
+        TCalDavPrincipal user = TResourceFactory.findUser(userName);
+        if( user == null ) {
+            System.out.println("User not found: " + userName);
+            return null;
+        }
+        if (user.authenticate(password)) {
+            return user;
+        } else {
+            System.out.println("Passwords don't match: " + password + " != " + user.getPassword());
+            return null;
+        }
+    }
 
-	@Override
-	public List<LdapContact> galFind(Condition condition, int sizeLimit) {
-		log.trace("galFind");
-		List<LdapContact> results = new ArrayList<LdapContact>();
+    @Override
+    public List<LdapContact> galFind(Condition condition, int sizeLimit) {
+        log.trace("galFind");
+        List<LdapContact> results = new ArrayList<LdapContact>();
 
-		for (Resource r : resourceFactory.getUsers()) {
-			if (r instanceof TCalDavPrincipal) {
-				TCalDavPrincipal user = (TCalDavPrincipal) r;
-				if (condition == null || condition.isMatch(user)) {
-					log.debug("searchContacts: add to results:" + user.getName());
-					results.add(user);
-					if (results.size() >= sizeLimit) {
-						break;
-					}
-				}
-			}
-		}
-		log.debug("galFind: results: " + results.size());
-		return results;
-	}
+        for (Resource r : resourceFactory.getUsers()) {
+            if (r instanceof TCalDavPrincipal) {
+                TCalDavPrincipal user = (TCalDavPrincipal) r;
+                if (condition == null || condition.isMatch(user)) {
+                    log.debug("searchContacts: add to results:" + user.getName());
+                    results.add(user);
+                    if (results.size() >= sizeLimit) {
+                        break;
+                    }
+                }
+            }
+        }
+        log.debug("galFind: results: " + results.size());
+        return results;
+    }
 }

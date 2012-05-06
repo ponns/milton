@@ -47,7 +47,8 @@ public class LdapServer extends Thread {
     public static final int DEFAULT_PORT = 389;
     private final UserFactory userSessionFactory;
     private final List<PropertySource> propertySources;
-    private final SearchManager searchManager = new SearchManager();
+    private final SearchManager searchManager;
+    private final LdapTransactionManager txManager;
     protected boolean nosslFlag;
     private int port;
     private String bindAddress;
@@ -62,8 +63,10 @@ public class LdapServer extends Thread {
      *
      * @param port pop listen port, 389 if not defined (0)
      */
-    public LdapServer(UserFactory userSessionFactory, List<PropertySource> propertySources, int port, boolean nosslFlag, String bindAddress) {
+    public LdapServer(LdapTransactionManager txManager, UserFactory userSessionFactory, List<PropertySource> propertySources, int port, boolean nosslFlag, String bindAddress) {
         super(LdapServer.class.getName());
+        this.txManager = txManager;
+        searchManager = new SearchManager(txManager);
         setDaemon(true);
         if (port == 0) {
             this.port = LdapServer.DEFAULT_PORT;
@@ -76,11 +79,14 @@ public class LdapServer extends Thread {
         this.nosslFlag = nosslFlag;
     }
 
-    public LdapServer(UserFactory userSessionFactory, List<PropertySource> propertySources) {
+    public LdapServer(LdapTransactionManager txManager, UserFactory userSessionFactory, List<PropertySource> propertySources) {
         super(LdapServer.class.getName());
+        this.txManager = txManager;
+        searchManager = new SearchManager(txManager);
         setDaemon(true);
         this.userSessionFactory = userSessionFactory;
         this.propertySources = propertySources;
+        this.port = LdapServer.DEFAULT_PORT;
     }
 
     /**
@@ -91,11 +97,14 @@ public class LdapServer extends Thread {
      * @param userSessionFactory
      * @param webDavProtocol
      */
-    public LdapServer(UserFactory userSessionFactory, WebDavProtocol webDavProtocol) {
+    public LdapServer(LdapTransactionManager txManager, UserFactory userSessionFactory, WebDavProtocol webDavProtocol) {
         super(LdapServer.class.getName());
+        this.txManager = txManager;
+        searchManager = new SearchManager(txManager);
         setDaemon(true);
         this.userSessionFactory = userSessionFactory;
         this.propertySources = webDavProtocol.getPropertySources();
+        this.port = LdapServer.DEFAULT_PORT;
     }
 
     public boolean isNosslFlag() {
@@ -123,7 +132,7 @@ public class LdapServer extends Thread {
     }
 
     public LdapConnection createConnectionHandler(Socket clientSocket) {
-        return new LdapConnection(clientSocket, userSessionFactory, propertySources, searchManager);
+        return new LdapConnection(clientSocket, userSessionFactory, propertySources, searchManager, txManager);
     }
 
     @Override
@@ -188,8 +197,10 @@ public class LdapServer extends Thread {
         try {
             // create the server socket
             if (bindAddress == null || bindAddress.length() == 0) {
+                log.info("Starting LDAP server on all interfaces and port: " + port);
                 serverSocket = serverSocketFactory.createServerSocket(port);
             } else {
+                log.info("Starting LDAP server on interface: " + bindAddress + " and port: " + port);
                 serverSocket = serverSocketFactory.createServerSocket(port, 0, Inet4Address.getByName(bindAddress));
             }
         } catch (IOException e) {
