@@ -30,14 +30,17 @@ public class TEvent extends TResource implements ICalResource {
         return e;
     }
 
+    @Override
     public void sendContent( OutputStream out, Range range, Map<String, String> params, String contentType ) throws IOException, NotAuthorizedException, BadRequestException {
         out.write( iCalData.getBytes() );
     }
 
+    @Override
     public String getContentType( String accepts ) {
         return "text/calendar";
     }
 
+    @Override
     public String getICalData() {
         return iCalData;
     }
