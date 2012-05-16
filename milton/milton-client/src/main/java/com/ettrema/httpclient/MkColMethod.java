@@ -1,19 +1,21 @@
 package com.ettrema.httpclient;
 
-import org.apache.commons.httpclient.HttpMethodBase;
+import java.net.URI;
+import java.net.URISyntaxException;
+import org.apache.http.client.methods.HttpRequestBase;
 
 /**
  *
  * @author mcevoyb
  */
-public class MkColMethod extends HttpMethodBase {
+public class MkColMethod extends HttpRequestBase {
 
-    public MkColMethod( String uri ) {
-        super( uri );
+    public MkColMethod( String uri ) throws URISyntaxException {
+        setURI(new URI(uri));
     }
 
     @Override
-    public String getName() {
+    public String getMethod() {
         return "MKCOL";
     }
 }

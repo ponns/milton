@@ -1,8 +1,10 @@
 package com.ettrema.httpclient;
 
 import com.bradmcevoy.http.Range;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
-import org.apache.commons.httpclient.HttpMethodBase;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,18 +34,18 @@ import org.slf4j.LoggerFactory;
  * @version $Revision: 480424 $
  * @since 1.0
  */
-public class RangedGetMethod extends HttpMethodBase {
+public class RangedGetMethod extends HttpRequestBase {
 
     // -------------------------------------------------------------- Constants
     /** Log object for this class. */
     private static final Logger log = LoggerFactory.getLogger(RangedGetMethod.class);
 
-    public RangedGetMethod(String uri, List<Range> dataRanges) {
-        super(uri);    
+    public RangedGetMethod(String uri, List<Range> dataRanges) throws URISyntaxException {
+        setURI(new URI(uri));
         if (dataRanges != null && !dataRanges.isEmpty()) {
             String rangeHeaderVal = getRangesRequest(dataRanges);
 			log.info("ranges: " + rangeHeaderVal);
-            setRequestHeader("Range", "bytes=" + rangeHeaderVal);
+            setHeader("Range", "bytes=" + rangeHeaderVal);
         } else {
 			log.info("No ranges to get");
 		}
@@ -58,28 +60,8 @@ public class RangedGetMethod extends HttpMethodBase {
         return sb.toString();
     }
 
-    public String getName() {
+    @Override
+    public String getMethod() {
         return "GET";
-    }
-
-    // ------------------------------------------------------------- Properties
-    /**
-     * Recycles the HTTP method so that it can be used again.
-     * Note that all of the instance variables will be reset
-     * once this method has been called. This method will also
-     * release the connection being used by this HTTP method.
-     * 
-     * @see #releaseConnection()
-     * 
-     * @since 1.0
-     * 
-     * @deprecated no longer supported and will be removed in the future
-     *             version of HttpClient
-     */
-    public void recycle() {
-        log.trace("enter GetMethod.recycle()");
-
-        super.recycle();
-        setFollowRedirects(true);
     }
 }

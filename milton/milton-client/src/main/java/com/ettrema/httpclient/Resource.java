@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -190,14 +191,22 @@ public abstract class Resource {
         if (lockToken != null) {
             log.warn("already locked: " + href() + " token: " + lockToken);
         }
-        lockToken = host().doLock(encodedUrl());
+        try {
+            lockToken = host().doLock(encodedUrl());
+        } catch (URISyntaxException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     public int unlock() throws HttpException , NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         if (lockToken == null) {
             throw new IllegalStateException("Can't unlock, is not currently locked (no lock token) - " + href());
         }
-        return host().doUnLock(encodedUrl(), lockToken);
+        try {
+            return host().doUnLock(encodedUrl(), lockToken);
+        } catch (URISyntaxException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     public void copyTo(Folder folder) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException  {
@@ -205,7 +214,11 @@ public abstract class Resource {
     }
 
     public void copyTo(Folder folder, String destName) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException  {
-        host().doCopy(encodedUrl(), folder.encodedUrl() + com.bradmcevoy.http.Utils.percentEncode(destName));
+        try {
+            host().doCopy(encodedUrl(), folder.encodedUrl() + com.bradmcevoy.http.Utils.percentEncode(destName));
+        } catch (URISyntaxException ex) {
+            throw new RuntimeException(ex);
+        }
         folder.flush();
     }
     
@@ -215,7 +228,12 @@ public abstract class Resource {
             dest = parent.encodedUrl();
         }
         dest = dest + com.bradmcevoy.http.Utils.percentEncode(newName);
-        int res = host().doMove(encodedUrl(), dest);
+        int res;
+        try {
+            res = host().doMove(encodedUrl(), dest);
+        } catch (URISyntaxException ex) {
+            throw new RuntimeException(ex);
+        }
         if (res == 201) {
             this.name = newName;
         }
@@ -226,7 +244,12 @@ public abstract class Resource {
     }
     public void moveTo(Folder folder, String destName) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException  {
         log.info("Move: " + this.href() + " to " + folder.href());
-        int res = host().doMove(encodedUrl(), folder.href() + com.bradmcevoy.http.Utils.percentEncode(destName));
+        int res;
+        try {
+            res = host().doMove(encodedUrl(), folder.href() + com.bradmcevoy.http.Utils.percentEncode(destName));
+        } catch (URISyntaxException ex) {
+            throw new RuntimeException(ex);
+        }
         if (res == 201) {
             this.parent.flush();
             folder.flush();

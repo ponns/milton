@@ -8,15 +8,16 @@ import com.bradmcevoy.http.exceptions.NotFoundException;
 import com.ettrema.common.LogUtils;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.util.List;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpMethodBase;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
-import org.apache.commons.httpclient.methods.PutMethod;
-import org.apache.commons.httpclient.methods.RequestEntity;
-import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.InputStreamEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,23 +40,29 @@ public class TransferService {
     public synchronized void get(String url, StreamReceiver receiver, List<Range> rangeList, ProgressListener listener) throws com.ettrema.httpclient.HttpException, Utils.CancelledException, NotAuthorizedException, BadRequestException, ConflictException, NotFoundException {
         LogUtils.trace(log, "get: ", url);
         notifyStartRequest();
-        HttpMethodBase m;
+        HttpRequestBase m;
         if (rangeList != null) {
-            m = new RangedGetMethod(url, rangeList);
+            try {
+                m = new RangedGetMethod(url, rangeList);
+            } catch (URISyntaxException ex) {
+                throw new RuntimeException(ex);
+            }
         } else {
-            m = new GetMethod(url);
+            m = new HttpGet(url);
         }
         InputStream in = null;
         NotifyingFileInputStream nin = null;
         try {
-            int res = client.executeMethod(m);
-            Utils.processResultCode(res, url);
-            in = m.getResponseBodyAsStream();
-            nin = new NotifyingFileInputStream(in, m.getResponseContentLength(), url, listener);
+            HttpResponse resp = client.execute(m);
+            if( resp.getEntity() == null ) {
+                log.warn("Did not receive a response entity for GET");
+                return ;
+            }
+            HttpEntity entity = resp.getEntity();
+            in = entity.getContent();
+            Utils.processResultCode(resp.getStatusLine().getStatusCode(), url);
+            nin = new NotifyingFileInputStream(in, entity.getContentLength(), url, listener);
             receiver.receive(nin);
-        } catch (org.apache.commons.httpclient.HttpException ex) {
-            m.abort();
-            throw new GenericHttpException(ex.getReasonCode(), url);
         } catch (Utils.CancelledException ex) {
             m.abort();
             throw ex;
@@ -64,7 +71,6 @@ public class TransferService {
             throw new RuntimeException(ex);
         } finally {
             Utils.close(in);
-            m.releaseConnection();
             notifyFinishRequest();
         }
     }
@@ -73,29 +79,24 @@ public class TransferService {
         LogUtils.trace(log, "put: ", encodedUrl);
         notifyStartRequest();
         String s = encodedUrl;
-        PutMethod p = new PutMethod(s);
+        HttpPut p = new HttpPut(s);
 
-        HttpMethodParams params = new HttpMethodParams();
-        params.setSoTimeout(timeout);
-        p.setParams(params);
         NotifyingFileInputStream notifyingIn = null;
         try {
             notifyingIn = new NotifyingFileInputStream(content, contentLength, s, listener);
-            RequestEntity requestEntity;
+            HttpEntity requestEntity;
             if (contentLength == null) {
-                log.trace("no content length");
-                requestEntity = new InputStreamRequestEntity(notifyingIn, contentType);
+                throw new RuntimeException("Content length for input stream is null, you must provide a length");                
             } else {
-                requestEntity = new InputStreamRequestEntity(notifyingIn, contentLength, contentType);
+                requestEntity = new InputStreamEntity(notifyingIn, contentLength);
             }
-            p.setRequestEntity(requestEntity);
-            int result = client.executeMethod(p);
+            p.setEntity(requestEntity);
+            int result = Utils.executeHttpWithStatus(client, p, null);
             return result;
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         } finally {
             IOUtils.closeQuietly(notifyingIn);
-            p.releaseConnection();
             notifyFinishRequest();
         }
     }

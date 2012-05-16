@@ -1,24 +1,25 @@
 package com.ettrema.httpclient;
 
-import org.apache.commons.httpclient.Header;
-import org.apache.commons.httpclient.HttpMethodBase;
+import java.net.URI;
+import java.net.URISyntaxException;
+import org.apache.http.client.methods.HttpRequestBase;
 
 /**
  *
  * @author mcevoyb
  */
-class MoveMethod extends HttpMethodBase {
+class MoveMethod extends HttpRequestBase {
 
     final String newUri;
 
-    public MoveMethod( String uri, String newUri ) {
-        super( uri );
+    public MoveMethod( String uri, String newUri ) throws URISyntaxException {
+        setURI(new URI(uri));
         this.newUri = newUri;
-        addRequestHeader( new Header( "Destination", newUri ) );
+        addHeader( "Destination", newUri );
     }
 
     @Override
-    public String getName() {
+    public String getMethod() {
         return "MOVE";
     }
 

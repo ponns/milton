@@ -12,10 +12,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -244,7 +246,11 @@ public class Folder extends Resource {
         children(); // ensure children are loaded
         String newUri = encodedUrl() + com.bradmcevoy.http.Utils.percentEncode(name);
         try {
-            host().doMkCol(newUri);
+            try {
+                host().doMkCol(newUri);
+            } catch (URISyntaxException ex) {
+                throw new RuntimeException(ex);
+            }
             flush();
             Folder child = (Folder) child(name);
             notifyOnChildAdded(child);

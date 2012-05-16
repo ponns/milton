@@ -1,23 +1,25 @@
 package com.ettrema.httpclient;
 
-import org.apache.commons.httpclient.HttpMethodBase;
+import java.net.URI;
+import java.net.URISyntaxException;
+import org.apache.http.client.methods.HttpRequestBase;
 
 /**
  *
  * @author mcevoyb
  */
-public class UnLockMethod extends HttpMethodBase {
+public class UnLockMethod extends HttpRequestBase {
 
 	private final String lockToken;
 	
-    public UnLockMethod( String uri, String lockToken ) {
-        super( uri );
+    public UnLockMethod( String uri, String lockToken ) throws URISyntaxException {
+        setURI(new URI(uri));
 		this.lockToken = lockToken;
-		addRequestHeader("Lock-Token", lockToken);
+		addHeader("Lock-Token", lockToken);
     }
 
     @Override
-    public String getName() {
+    public String getMethod() {
         return "UNLOCK";
     }
 
