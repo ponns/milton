@@ -9,7 +9,7 @@
 	<groupId>com.ettrema</groupId>
 	<artifactId>milton-api</artifactId>
 	<packaging>jar</packaging>
-	<name>Milton WebDav API</name>
+	<name>Milton WebDav API</name>	
 	<dependencies>
 		<dependency>
 			<groupId>org.jdom</groupId>
