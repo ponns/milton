@@ -139,7 +139,7 @@ public class WebDavProtocol implements HttpExtension, PropertySource {
 		log.debug( "provided property sources: " + propertySources.size() );
         this.propertySources = propertySources;
 
-        log.debug( "adding webdav as a property source" );
+        log.debug( "adding webdav as a property source to: " + this.propertySources.getClass() + " hashCode: " + this.propertySources.hashCode() );
         addPropertySource( this );
         if( patchSetter == null ) {
             log.info( "creating default patcheSetter: " + PropertySourcePatchSetter.class );
