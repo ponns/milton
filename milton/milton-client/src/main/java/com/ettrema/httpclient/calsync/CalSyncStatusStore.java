@@ -20,6 +20,18 @@ package com.ettrema.httpclient.calsync;
  * @author brad
  */
 public interface CalSyncStatusStore {
+    
+    /**
+     * Set the last synced etag for the named resource when syncing the given local
+     * and remote stores
+     * 
+     * @param local
+     * @param remote
+     * @param resourceName
+     * @param etag 
+     */
+    void setLastSyncedEtag(CalendarStore local, CalendarStore remote, String resourceName, String etag);
+    
     /**
      * Return the last CTag seen from the remote server when syncing with the local
      * store. Note that the persisted ctag must have been obtained no later then
@@ -31,4 +43,15 @@ public interface CalSyncStatusStore {
      * @return 
      */
     String getLastSyncedCtag(CalendarStore local, CalendarStore remote);
+
+    /**
+     * Get the last seen etag for the given remote resource name, from the given remote
+     * store when syncing the given local store
+     * 
+     * @param local
+     * @param remote
+     * @param resourceName
+     * @return 
+     */
+    String getLastSyncedEtag(CalendarStore local, CalendarStore remote, String resourceName);
 }

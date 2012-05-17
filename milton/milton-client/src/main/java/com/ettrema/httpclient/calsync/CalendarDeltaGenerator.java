@@ -15,10 +15,10 @@
  */
 package com.ettrema.httpclient.calsync;
 
-import com.bradmcevoy.http.Resource;
+import com.bradmcevoy.common.Path;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
-import com.ettrema.http.CalendarCollection;
+import com.ettrema.httpclient.calsync.ConflictManager.ConflictAction;
 import java.util.List;
 import java.util.Map;
 
@@ -32,14 +32,18 @@ public class CalendarDeltaGenerator {
 
     private CalendarStore local;
     private CalendarStore remote;
+    private CalSyncStatusStore statusStore;
+    private DeltaListener deltaListener;
+    private ConflictManager conflictManager;
 
     public void compareCalendars() throws NotAuthorizedException, BadRequestException {
 
         // Check ctags
         String remoteCtag = remote.getCtag();
-        String localCtag = local.getCtag();
-        if (remoteCtag != null && remoteCtag.equals(localCtag)) {
+        String lastSyncedCTag = statusStore.getLastSyncedCtag(local, remote);
+        if (remoteCtag != null && remoteCtag.equals(lastSyncedCTag)) {
             // no changes, we're done
+            return;
         }
 
         List<CalSyncEvent> remoteChildren = remote.getChildren();
@@ -53,10 +57,18 @@ public class CalendarDeltaGenerator {
                 doMissingLocal(remoteRes);
             } else {
                 if (localRes.getEtag() != null && localRes.getEtag().equals(remoteRes.getEtag())) {
-                    //syncStatusStore.setBackedupHash(childPath, localTriplet.getHash());
+                    statusStore.setLastSyncedEtag(local, remote, remoteRes.getName(), remoteRes.getEtag());
                 } else {
-                    doDifferentHashes(remoteRes, localRes);
+                    doDifferentETags(remoteRes, localRes);
                 }
+            }
+        }
+        
+        // Now check for remote deletes by iterating over local children looking for missing remotes
+        for( CalSyncEvent localRes : localChildren ) {
+            CalSyncEvent remoteRes = remoteMap.get(localRes.getName());
+            if( remoteRes == null ) {
+                doMissingRemote(localRes);
             }
         }
     }
@@ -64,10 +76,71 @@ public class CalendarDeltaGenerator {
     private void doMissingLocal(CalSyncEvent remoteRes) {
         // There is a resource in the remote store, but no corresponding local resource
         // Need to determine if it has been locally deleted or remotely created
-        
+        String lastSyncedEtag = statusStore.getLastSyncedEtag(local, remote, remoteRes.getName());
+        if (lastSyncedEtag == null) {
+            // we've never seen it before, so it must be remotely new
+            deltaListener.onRemoteChange(remoteRes, local);
+        } else {
+            // we have previously synced this item, it no longer exists, so must have been deleted
+            deltaListener.onLocalDeletion(remoteRes, remote);
+        }
+    }
+    
+    /**
+     * There is a local event with no corresponding remote event, so either remotely
+     * deleted or locall created. Check sync status to find out which
+     * 
+     * @param localRes 
+     */
+    private void doMissingRemote(CalSyncEvent localRes) {
+        String lastSyncedEtag = statusStore.getLastSyncedEtag(local, remote, localRes.getName());
+        if( lastSyncedEtag == null ) {
+            // never before synced, so is locally new
+            deltaListener.onLocalChange(localRes, null, remote);
+        } else {
+            // has been synced before, so was on server and not now = rmotely deleted
+            deltaListener.onRemoteDelete(localRes, local);
+        }
+    }    
+
+    /** so we know the events differ, but which is most up to date?
+    we check the last synced etag for this local and remote store
+    if current remote etag is different to last synced etag, then remote is modified
+    if current local etag is different then local is modified
+    it both modified then its a CONFLICT    
+    */
+    private void doDifferentETags(CalSyncEvent remoteRes, CalSyncEvent localRes) {
+        String lastSyncedEtag = statusStore.getLastSyncedEtag(local, remote, remoteRes.getName());
+        if( lastSyncedEtag == null ) {
+            onConflict(remoteRes, localRes);
+        } else {
+            if( !lastSyncedEtag.equals(remoteRes.getEtag()) && !lastSyncedEtag.equals(localRes.getEtag()) ) {
+                onConflict(remoteRes, localRes);
+            } else if( !lastSyncedEtag.equals(remoteRes.getEtag()) ) {
+                deltaListener.onRemoteChange(remoteRes, local);
+            } else if( !lastSyncedEtag.equals(localRes.getEtag())) {
+                deltaListener.onLocalChange(localRes, remoteRes, remote);
+            }
+        }
     }
 
-    private void doDifferentHashes(CalSyncEvent remoteRes, CalSyncEvent localRes) {
-        throw new UnsupportedOperationException("Not yet implemented");
+    private boolean onConflict(CalSyncEvent remoteRes, CalSyncEvent localRes) {
+        // local and remote are different, but we don't have sync status to tell us which is
+        // we should use. This can happen if the user has removed the sync status database
+        // or has just installed this sync software.
+        // So we delegate to the conflict handler to decide what to do
+        ConflictAction action = conflictManager.resolveConflict(remoteRes, localRes, remote, local);
+        switch (action) {
+            case NO_CHANGE:
+                return true;
+            case USE_LOCAL:
+                deltaListener.onLocalChange(localRes, remoteRes, remote);
+                return true;
+        case USE_REMOTE:
+            deltaListener.onRemoteChange(remoteRes, local);
+        }
+        return false;
     }
+
+
 }
