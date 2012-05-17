@@ -472,7 +472,7 @@ public class CardDavProtocol implements HttpExtension, PropertySource, WellKnown
                     CardDavPrincipal p = (CardDavPrincipal) auth.getTag();
                     addressBookHomes = p.getAddressBookHomeSet();
                     if (addressBookHomes == null || addressBookHomes.isEmpty()) {
-                        log.warn("can't redirect, CalDavPrincipal.getCalendatHomeSet did not return an address. Check implementation class: " + p.getClass());
+                        log.error("can't redirect, CalDavPrincipal.getCalendatHomeSet did not return an address. Check implementation class: " + p.getClass());
                         return null;
                     } else {
                         first = addressBookHomes.get(0); // just use first
