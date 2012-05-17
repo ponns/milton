@@ -52,7 +52,7 @@ public class LdapServer extends Thread {
     protected boolean nosslFlag;
     private int port;
     private String bindAddress;
-    private boolean allowRemote;
+    private boolean allowRemote = true;
     private File keystoreFile;
     private String keystoreType;
     private String keystorePass;
@@ -227,8 +227,7 @@ public class LdapServer extends Thread {
                 clientSocket.setSoTimeout(300000);
                 log.info("CONNECTION_FROM" + clientSocket.getInetAddress() + port);
                 // only accept localhost connections for security reasons
-                if (allowRemote
-                        || clientSocket.getInetAddress().isLoopbackAddress()) {
+                if (allowRemote || clientSocket.getInetAddress().isLoopbackAddress()) {
                     connection = createConnectionHandler(clientSocket);
                     connection.start();
                 } else {
