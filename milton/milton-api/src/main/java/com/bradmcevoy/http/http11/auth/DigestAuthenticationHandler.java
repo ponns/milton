@@ -24,6 +24,7 @@ public class DigestAuthenticationHandler implements AuthenticationHandler {
         this.digestHelper = new DigestHelper(nonceProvider);
     }
 
+	@Override
     public boolean supports( Resource r, Request request ) {
         Auth auth = request.getAuthorization();
         if( auth == null ) {
@@ -51,10 +52,13 @@ public class DigestAuthenticationHandler implements AuthenticationHandler {
         Auth auth = request.getAuthorization();
         DigestResponse resp = digestHelper.calculateResponse(auth, r.getRealm(), request.getMethod());
         if( resp == null ) {
-            log.debug("requested digest authentication is invalid or incorrectly formatted");
+            log.info("requested digest authentication is invalid or incorrectly formatted");
             return null;
         } else {
             Object o = digestResource.authenticate( resp );
+			if( o == null ) {
+				log.info("digest authentication failed from resource: " + digestResource.getClass() + " - " + digestResource.getName() + " for user: " + resp.getUser());
+			}
             return o;
         }
     }
@@ -66,6 +70,7 @@ public class DigestAuthenticationHandler implements AuthenticationHandler {
         return digestHelper.getChallenge(nonceValue, request.getAuthorization(), resource.getRealm());
     }
 
+	@Override
     public boolean isCompatible( Resource resource ) {
         if ( resource instanceof DigestResource ) {
 			DigestResource dr = (DigestResource) resource;

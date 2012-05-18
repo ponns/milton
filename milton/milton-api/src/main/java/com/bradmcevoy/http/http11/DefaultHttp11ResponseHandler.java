@@ -77,11 +77,12 @@ public class DefaultHttp11ResponseHandler implements Http11ResponseHandler, Buff
 	}
 
 	@Override
-	public void respondUnauthorised(Resource resource, Response response, Request request) {
-		log.trace("respondUnauthorised");
+	public void respondUnauthorised(Resource resource, Response response, Request request) {		
 		if (authenticationService.canUseExternalAuth(resource, request)) {
+			log.info("respondUnauthorised: use external authentication");
 			initiateExternalAuth(resource, request, response);
 		} else {
+			log.info("respondUnauthorised: return staus: " + Response.Status.SC_UNAUTHORIZED);
 			response.setStatus(Response.Status.SC_UNAUTHORIZED);
 			List<String> challenges = authenticationService.getChallenges(resource, request);
 			response.setAuthenticateHeader(challenges);

@@ -16,6 +16,7 @@ public class BasicAuthHandler implements AuthenticationHandler {
 
     private static final Logger log = LoggerFactory.getLogger( BasicAuthHandler.class );
 
+	@Override
     public boolean supports( Resource r, Request request ) {
         Auth auth = request.getAuthorization();
         if( auth == null ) {
@@ -25,6 +26,7 @@ public class BasicAuthHandler implements AuthenticationHandler {
         return auth.getScheme().equals( Scheme.BASIC );
     }
 
+	@Override
     public Object authenticate( Resource resource, Request request ) {
         log.trace( "authenticate" );
         Auth auth = request.getAuthorization();
@@ -33,10 +35,15 @@ public class BasicAuthHandler implements AuthenticationHandler {
         return o;
     }
 
+	@Override
     public String getChallenge( Resource resource, Request request ) {
+		if( resource == null ) {
+			throw new RuntimeException("Can't generate challenge because resource is null, so can't get realm");
+		}
         return "Basic realm=\"" + resource.getRealm() + "\"";
     }
 
+	@Override
     public boolean isCompatible( Resource resource ) {
         return true;
     }

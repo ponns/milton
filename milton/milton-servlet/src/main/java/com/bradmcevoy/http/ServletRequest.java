@@ -242,9 +242,11 @@ public class ServletRequest extends AbstractRequest {
     @Override
     public List<Cookie> getCookies() {
         ArrayList<Cookie> list = new ArrayList<Cookie>();
-        for (javax.servlet.http.Cookie c : request.getCookies()) {
-            list.add(new ServletCookie(c));
+        if (request.getCookies() != null) {
+            for (javax.servlet.http.Cookie c : request.getCookies()) {
+                list.add(new ServletCookie(c));
 
+            }
         }
         return list;
     }

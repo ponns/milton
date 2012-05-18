@@ -4,16 +4,17 @@ import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.ConflictException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
 import com.bradmcevoy.http.exceptions.NotFoundException;
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.util.Map;
+import java.util.Map.Entry;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpMessage;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.protocol.HTTP;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -167,4 +168,37 @@ public class Utils {
 
     public static class CancelledException extends IOException {
     }
+    
+    public static String format (Map<String,String> parameters, final String encoding) {
+        final StringBuilder result = new StringBuilder();
+        for ( Entry<String, String> p : parameters.entrySet()) {
+            final String encodedName = encode(p.getKey(), encoding);
+            final String value = p.getValue();
+            final String encodedValue = value != null ? encode(value, encoding) : "";
+            if (result.length() > 0) {
+                result.append("&");
+            }
+            result.append(encodedName);
+            result.append("=");
+            result.append(encodedValue);
+        }
+        return result.toString();
+    }
+
+//    private static String decode (final String content, final String encoding) {
+//        try {
+//            return URLDecoder.decode(content,
+//                    encoding != null ? encoding : HTTP.DEFAULT_CONTENT_CHARSET);
+//        } catch (UnsupportedEncodingException problem) {
+//            throw new IllegalArgumentException(problem);
+//        }
+//    }
+
+    private static String encode (final String content, final String encoding) {
+        try {
+            return URLEncoder.encode(content, encoding != null ? encoding : HTTP.DEFAULT_CONTENT_CHARSET);
+        } catch (UnsupportedEncodingException problem) {
+            throw new IllegalArgumentException(problem);
+        }
+    }    
 }
