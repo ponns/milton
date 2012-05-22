@@ -15,6 +15,8 @@
  */
 package com.ettrema.httpclient.calsync;
 
+import com.ettrema.httpclient.calsync.CalendarStore;
+
 /**
  *
  * @author brad
@@ -54,4 +56,6 @@ public interface CalSyncStatusStore {
      * @return 
      */
     String getLastSyncedEtag(CalendarStore local, CalendarStore remote, String resourceName);
+
+    public void setLastSyncedCtag(CalendarStore local, CalendarStore remote, String remoteCtag);
 }

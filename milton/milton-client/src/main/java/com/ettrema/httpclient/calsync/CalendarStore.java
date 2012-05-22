@@ -15,6 +15,7 @@
  */
 package com.ettrema.httpclient.calsync;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -44,5 +45,59 @@ public interface CalendarStore {
      */
     String getCtag();       
     
+    /**
+     * Get the items within this store. The object returned only needs sufficient
+     * information to identify the resource and its state. It might not be efficient
+     * to retrieve all of the data associated with the event, especially for remote stores
+     * 
+     * @return 
+     */
     List<CalSyncEvent> getChildren();
+
+    /**
+     * Remove the event with the given name. The etag of the resource is provided,
+     * as it was when information about this event was retrieved. It might be
+     * desirable to ensure the etag has not changed
+     * 
+     * @param event
+     */
+    void deleteEvent(CalSyncEvent event);
+    
+    /**
+     * Get the ical data for the given event. If the ical data has already been
+     * retrieved just return it from the event. Remote stores will usually make
+     * a seperate call to retrieve this information
+     * 
+     * 
+     * @param event
+     * @return 
+     */
+    String getICalData(CalSyncEvent event);
+    
+    /**
+     * Update the given event with the icaldata
+     * 
+     * @param event
+     * @param icalData 
+     * @return the etag of the modified event
+     */
+    String setICalData(CalSyncEvent event, String icalData);
+    
+    /**
+     * Find the modified date for the given event
+     * 
+     * @param event
+     * @return 
+     */
+    Date getModifiedDate(CalSyncEvent event);
+
+    /**
+     * Crete a new event in this store with the given name and ical data and return
+     * its etag
+     * 
+     * @param name
+     * @param icalText
+     * @return the etag for the newly created resource
+     */
+    String createICalEvent(String name, String icalText);
 }

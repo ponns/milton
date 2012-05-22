@@ -15,6 +15,8 @@
  */
 package com.ettrema.httpclient.calsync;
 
+import java.util.Date;
+
 /**
  * Represents an item in a local or remote calendar
  *

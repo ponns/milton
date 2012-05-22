@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ettrema.httpclient.calsync;
+package com.ettrema.httpclient.calsync.store;
+
+import com.ettrema.httpclient.calsync.CalendarStore;
 
 /**
  * Represents access to a remote calendar.

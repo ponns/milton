@@ -297,7 +297,8 @@ public class Host extends Folder {
 
         // Dont use transferService so we can use byte array
         try {            
-            HttpEntity requestEntity = new ByteArrayEntity(data);
+            ByteArrayEntity requestEntity = new ByteArrayEntity(data);
+            requestEntity.setContentType(contentType);
             p.setEntity(requestEntity);
             int result = Utils.executeHttpWithStatus(client, p, null);
             return result;
@@ -847,7 +848,6 @@ public class Host extends Folder {
 
         @Override
         public void process(final HttpRequest request, final HttpContext context) {
-            log.info("------ process -------");
             AuthState authState = (AuthState) context.getAttribute(ClientContext.TARGET_AUTH_STATE);
 
             // If no auth scheme avaialble yet, try to initialize it
@@ -873,7 +873,6 @@ public class Host extends Folder {
 
         @Override
         public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
-            System.out.println("----------- no retry ---------- " + executionCount);
             return false;
         }
     }
@@ -882,16 +881,12 @@ public class Host extends Folder {
 
         @Override
         protected HttpRequestRetryHandler createHttpRequestRetryHandler() {
-            System.out.println("createHttpRequestRetryHandler");
             return new NoRetryHttpRequestRetryHandler();
         }
 
         @Override
         protected RequestDirector createClientRequestDirector(HttpRequestExecutor requestExec, ClientConnectionManager conman, ConnectionReuseStrategy reustrat, ConnectionKeepAliveStrategy kastrat, HttpRoutePlanner rouplan, HttpProcessor httpProcessor, HttpRequestRetryHandler retryHandler, RedirectStrategy redirectStrategy, AuthenticationHandler targetAuthHandler, AuthenticationHandler proxyAuthHandler, UserTokenHandler stateHandler, HttpParams params) {
-            System.out.println("createClientRequestDirector");
             RequestDirector rd = super.createClientRequestDirector(requestExec, conman, reustrat, kastrat, rouplan, httpProcessor, retryHandler, redirectStrategy, targetAuthHandler, proxyAuthHandler, stateHandler, params);
-            System.out.println("got rd: " + rd.getClass());
-            System.out.println("retryHandler: " + retryHandler.getClass());
             return rd;
         }
         

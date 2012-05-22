@@ -15,10 +15,10 @@
  */
 package com.ettrema.httpclient.calsync;
 
-import com.bradmcevoy.common.Path;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
 import com.ettrema.httpclient.calsync.ConflictManager.ConflictAction;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -30,11 +30,19 @@ import java.util.Map;
  */
 public class CalendarDeltaGenerator {
 
-    private CalendarStore local;
-    private CalendarStore remote;
-    private CalSyncStatusStore statusStore;
-    private DeltaListener deltaListener;
-    private ConflictManager conflictManager;
+    private final CalendarStore local;
+    private final CalendarStore remote;
+    private final CalSyncStatusStore statusStore;
+    private final DeltaListener deltaListener;
+    private final ConflictManager conflictManager;
+
+    public CalendarDeltaGenerator(CalendarStore local, CalendarStore remote, CalSyncStatusStore statusStore, DeltaListener deltaListener, ConflictManager conflictManager) {
+        this.local = local;
+        this.remote = remote;
+        this.statusStore = statusStore;
+        this.deltaListener = deltaListener;
+        this.conflictManager = conflictManager;
+    }
 
     public void compareCalendars() throws NotAuthorizedException, BadRequestException {
 
@@ -46,9 +54,9 @@ public class CalendarDeltaGenerator {
             return;
         }
 
-        List<CalSyncEvent> remoteChildren = remote.getChildren();
+        List<CalSyncEvent> remoteChildren = new ArrayList<CalSyncEvent>(remote.getChildren());
         Map<String, CalSyncEvent> remoteMap = SyncUtils.toMap(remoteChildren);
-        List<CalSyncEvent> localChildren = local.getChildren();
+        List<CalSyncEvent> localChildren = new ArrayList<CalSyncEvent>(local.getChildren());
         Map<String, CalSyncEvent> localMap = SyncUtils.toMap(localChildren);
 
         for (CalSyncEvent remoteRes : remoteChildren) {
@@ -63,14 +71,16 @@ public class CalendarDeltaGenerator {
                 }
             }
         }
-        
+
         // Now check for remote deletes by iterating over local children looking for missing remotes
-        for( CalSyncEvent localRes : localChildren ) {
+        for (CalSyncEvent localRes : localChildren) {
             CalSyncEvent remoteRes = remoteMap.get(localRes.getName());
-            if( remoteRes == null ) {
+            if (remoteRes == null) {
                 doMissingRemote(localRes);
             }
         }
+        
+        statusStore.setLastSyncedCtag(local, remote, remoteCtag);
     }
 
     private void doMissingLocal(CalSyncEvent remoteRes) {
@@ -79,47 +89,62 @@ public class CalendarDeltaGenerator {
         String lastSyncedEtag = statusStore.getLastSyncedEtag(local, remote, remoteRes.getName());
         if (lastSyncedEtag == null) {
             // we've never seen it before, so it must be remotely new
-            deltaListener.onRemoteChange(remoteRes, local);
+            if( deltaListener.onRemoteChange(remoteRes, remote, null, local) ) {
+                statusStore.setLastSyncedEtag(local, remote, remoteRes.getName(), remoteRes.getEtag());
+            }
         } else {
             // we have previously synced this item, it no longer exists, so must have been deleted
-            deltaListener.onLocalDeletion(remoteRes, remote);
+            if( deltaListener.onLocalDeletion(remoteRes, remote) ) {
+                statusStore.setLastSyncedEtag(local, remote, remoteRes.getName(), null);
+            }
         }
     }
-    
+
     /**
-     * There is a local event with no corresponding remote event, so either remotely
-     * deleted or locall created. Check sync status to find out which
-     * 
-     * @param localRes 
+     * There is a local event with no corresponding remote event, so either
+     * remotely deleted or locall created. Check sync status to find out which
+     *
+     * @param localRes
      */
     private void doMissingRemote(CalSyncEvent localRes) {
         String lastSyncedEtag = statusStore.getLastSyncedEtag(local, remote, localRes.getName());
-        if( lastSyncedEtag == null ) {
+        if (lastSyncedEtag == null) {
             // never before synced, so is locally new
-            deltaListener.onLocalChange(localRes, null, remote);
+            String newRemoteEtag = deltaListener.onLocalChange(localRes, local, null, remote);
+            if( newRemoteEtag != null ) {
+                statusStore.setLastSyncedEtag(local, remote, localRes.getName(), newRemoteEtag);
+            }
         } else {
             // has been synced before, so was on server and not now = rmotely deleted
-            deltaListener.onRemoteDelete(localRes, local);
+            if( deltaListener.onRemoteDelete(localRes, local) ) {
+                statusStore.setLastSyncedEtag(local, remote, localRes.getName(), null);
+            }
         }
-    }    
+    }
 
-    /** so we know the events differ, but which is most up to date?
-    we check the last synced etag for this local and remote store
-    if current remote etag is different to last synced etag, then remote is modified
-    if current local etag is different then local is modified
-    it both modified then its a CONFLICT    
-    */
+    /**
+     * so we know the events differ, but which is most up to date? we check the
+     * last synced etag for this local and remote store if current remote etag
+     * is different to last synced etag, then remote is modified if current
+     * local etag is different then local is modified it both modified then its
+     * a CONFLICT
+     */
     private void doDifferentETags(CalSyncEvent remoteRes, CalSyncEvent localRes) {
         String lastSyncedEtag = statusStore.getLastSyncedEtag(local, remote, remoteRes.getName());
-        if( lastSyncedEtag == null ) {
+        if (lastSyncedEtag == null) {
             onConflict(remoteRes, localRes);
         } else {
-            if( !lastSyncedEtag.equals(remoteRes.getEtag()) && !lastSyncedEtag.equals(localRes.getEtag()) ) {
+            if (!lastSyncedEtag.equals(remoteRes.getEtag()) && !lastSyncedEtag.equals(localRes.getEtag())) {
                 onConflict(remoteRes, localRes);
-            } else if( !lastSyncedEtag.equals(remoteRes.getEtag()) ) {
-                deltaListener.onRemoteChange(remoteRes, local);
-            } else if( !lastSyncedEtag.equals(localRes.getEtag())) {
-                deltaListener.onLocalChange(localRes, remoteRes, remote);
+            } else if (!lastSyncedEtag.equals(remoteRes.getEtag())) {
+                if( deltaListener.onRemoteChange(remoteRes, remote, localRes, local) ) {
+                    statusStore.setLastSyncedEtag(local, remote, localRes.getName(), remoteRes.getEtag());
+                }
+            } else if (!lastSyncedEtag.equals(localRes.getEtag())) {
+                String newRemoteEtag = deltaListener.onLocalChange(localRes, local, remoteRes, remote);
+                if( newRemoteEtag != null ) {
+                    statusStore.setLastSyncedEtag(local, remote, localRes.getName(), remoteRes.getEtag());
+                }
             }
         }
     }
@@ -134,13 +159,16 @@ public class CalendarDeltaGenerator {
             case NO_CHANGE:
                 return true;
             case USE_LOCAL:
-                deltaListener.onLocalChange(localRes, remoteRes, remote);
+                String newRemoteEtag = deltaListener.onLocalChange(localRes, local, remoteRes, remote);
+                if( newRemoteEtag != null ) {
+                    statusStore.setLastSyncedEtag(local, remote, localRes.getName(), remoteRes.getEtag());
+                }
                 return true;
-        case USE_REMOTE:
-            deltaListener.onRemoteChange(remoteRes, local);
+            case USE_REMOTE:
+                if( deltaListener.onRemoteChange(remoteRes, remote, localRes, local) ) {
+                    statusStore.setLastSyncedEtag(local, remote, remoteRes.getName(), remoteRes.getEtag());
+                }
         }
         return false;
     }
-
-
 }
