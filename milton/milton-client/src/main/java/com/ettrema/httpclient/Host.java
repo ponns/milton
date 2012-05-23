@@ -1,6 +1,8 @@
 package com.ettrema.httpclient;
 
 import com.bradmcevoy.common.Path;
+import com.bradmcevoy.http.DateUtils;
+import com.bradmcevoy.http.DateUtils.DateParseException;
 import com.bradmcevoy.http.Range;
 import com.bradmcevoy.http.Response;
 import com.bradmcevoy.http.exceptions.BadRequestException;
@@ -17,10 +19,12 @@ import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import javax.xml.namespace.QName;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.*;
@@ -46,6 +50,10 @@ import org.apache.http.protocol.ExecutionContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpProcessor;
 import org.apache.http.protocol.HttpRequestExecutor;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.output.XMLOutputter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,11 +63,16 @@ import org.slf4j.LoggerFactory;
  */
 public class Host extends Folder {
 
-    private static String PROPFIND_XML = "<?xml version=\"1.0\"?>"
-            + "<d:propfind xmlns:d='DAV:' xmlns:c='clyde'><d:prop>"
-            + "<d:resourcetype/><d:displayname/><d:getcontentlength/><d:creationdate/><d:getlastmodified/><d:iscollection/><d:lockdiscovery/>"
-            + "<d:quota-available-bytes/><d:quota-used-bytes/><c:crc/>"
-            + "</d:prop></d:propfind>";
+    public static List<QName> defaultFields = Arrays.asList(
+            RespUtils.davName("resourcetype"), 
+            RespUtils.davName("displayname"), 
+            RespUtils.davName("getcontentlength"),
+            RespUtils.davName("creationdate"), 
+            RespUtils.davName("getlastmodified"),
+            RespUtils.davName("iscollection"),
+            RespUtils.davName("lockdiscovery")
+            );    
+
     private static String LOCK_XML = "<?xml version=\"1.0\" encoding=\"utf-8\" ?>"
             + "<D:lockinfo xmlns:D='DAV:'>"
             + "<D:lockscope><D:exclusive/></D:lockscope>"
@@ -80,7 +93,7 @@ public class Host extends Folder {
     private final TransferService transferService;
     private final FileSyncer fileSyncer;
     private final List<ConnectionListener> connectionListeners = new ArrayList<ConnectionListener>();
-    private String propFindXml = PROPFIND_XML;
+    
     private boolean secure; // use HTTPS if true
 
     static {
@@ -189,6 +202,17 @@ public class Host extends Folder {
         }
     }
 
+    /**
+     * Find a folder at the given path. Is much the same as find(path), except
+     * that it throws an exception if the resource is not a folder
+     *
+     * @param path
+     * @return
+     * @throws IOException
+     * @throws com.ettrema.httpclient.HttpException
+     * @throws NotAuthorizedException
+     * @throws BadRequestException
+     */
     public Folder getFolder(String path) throws IOException, com.ettrema.httpclient.HttpException, NotAuthorizedException, BadRequestException {
         Resource res = find(path);
         if (res instanceof Folder) {
@@ -198,6 +222,19 @@ public class Host extends Folder {
         }
     }
 
+    /**
+     * Create a collection at the given absolute path. This path is NOT relative
+     * to the host's base path
+     *
+     * @param newUri
+     * @return
+     * @throws com.ettrema.httpclient.HttpException
+     * @throws NotAuthorizedException
+     * @throws ConflictException
+     * @throws BadRequestException
+     * @throws NotFoundException
+     * @throws URISyntaxException
+     */
     public synchronized int doMkCol(Path newUri) throws com.ettrema.httpclient.HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException, URISyntaxException {
         String url = this.buildEncodedUrl(newUri);
         return doMkCol(url);
@@ -213,7 +250,7 @@ public class Host extends Folder {
         notifyStartRequest();
         MkColMethod p = new MkColMethod(newUri);
         try {
-            int result = Utils.executeHttpWithStatus(client, p, null);           
+            int result = Utils.executeHttpWithStatus(client, p, null);
             if (result == 409) {
                 // probably means the folder already exists
                 p.abort();
@@ -284,29 +321,29 @@ public class Host extends Folder {
      * @param contentType
      * @return
      */
-    public int doPut(Path path, InputStream content, Long contentLength, String contentType) {
+    public HttpResult doPut(Path path, InputStream content, Long contentLength, String contentType) {
         String dest = buildEncodedUrl(path);
         return doPut(dest, content, contentLength, contentType, null);
     }
 
-    public int doPut(Path path, byte[] data, String contentType) {
+    public HttpResult doPut(Path path, byte[] data, String contentType) {
         String dest = buildEncodedUrl(path);
         LogUtils.trace(log, "doPut: ", dest);
         notifyStartRequest();
         HttpPut p = new HttpPut(dest);
 
         // Dont use transferService so we can use byte array
-        try {            
+        try {
             ByteArrayEntity requestEntity = new ByteArrayEntity(data);
             requestEntity.setContentType(contentType);
             p.setEntity(requestEntity);
-            int result = Utils.executeHttpWithStatus(client, p, null);
+            HttpResult result = Utils.executeHttpWithResult(client, p, null);
             return result;
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         } finally {
             notifyFinishRequest();
-        }        
+        }
     }
 
     /**
@@ -318,12 +355,12 @@ public class Host extends Folder {
      * @throws FileNotFoundException
      * @throws HttpException
      */
-    public int doPut(Path remotePath, java.io.File file, ProgressListener listener) throws FileNotFoundException, HttpException, CancelledException, NotAuthorizedException, ConflictException {
+    public HttpResult doPut(Path remotePath, java.io.File file, ProgressListener listener) throws FileNotFoundException, HttpException, CancelledException, NotAuthorizedException, ConflictException {
         if (fileSyncer != null) {
             try {
                 fileSyncer.upload(this, file, remotePath, listener);
                 LogUtils.trace(log, "doPut: uploaded");
-                return Response.Status.SC_OK.code;
+                return new HttpResult(Response.Status.SC_OK.code, null);
             } catch (NotFoundException e) {
                 // ZSync file was not found
                 log.trace("Not found: " + remotePath);
@@ -351,7 +388,7 @@ public class Host extends Folder {
      * @param contentType
      * @return - the result code
      */
-    public synchronized int doPut(String newUri, InputStream content, Long contentLength, String contentType, ProgressListener listener) {
+    public synchronized HttpResult doPut(String newUri, InputStream content, Long contentLength, String contentType, ProgressListener listener) {
         LogUtils.trace(log, "doPut", newUri);
         return transferService.put(newUri, content, contentLength, contentType, listener);
     }
@@ -380,8 +417,22 @@ public class Host extends Folder {
 
     }
 
+    /**
+     * Deletes the item at the given path, relative to the root path of this host
+     * 
+     * @param path - unencoded and relative to Host's rootPath
+     * @return
+     * @throws IOException
+     * @throws com.ettrema.httpclient.HttpException
+     * @throws NotAuthorizedException
+     * @throws ConflictException
+     * @throws BadRequestException
+     * @throws NotFoundException 
+     */
     public synchronized int doDelete(Path path) throws IOException, com.ettrema.httpclient.HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
-        String dest = buildEncodedUrl(path);
+        Path root = Path.path(rootPath);
+        Path p = root.add(path);
+        String dest = buildEncodedUrl(p);
         return doDelete(dest);
     }
 
@@ -424,37 +475,83 @@ public class Host extends Folder {
         } finally {
             notifyFinishRequest();
         }
+    }
+    
+    public synchronized List<PropFindResponse> propFind(Path path, int depth, QName ... fields) throws IOException, com.ettrema.httpclient.HttpException, NotAuthorizedException, BadRequestException {
+        List<QName> list = new ArrayList<QName>();
+        list.addAll(Arrays.asList(fields));
+        return propFind(path, depth, list);
+    }
 
+    /**
+     * 
+     * @param path - unencoded path, which will be evaluated relative to this Host's basePath
+     * @param depth - 1 is to find immediate children, 2 includes their children, etc
+     * @param fields - the list of fields to get, or null to use default fields
+     * @return
+     * @throws IOException
+     * @throws com.ettrema.httpclient.HttpException
+     * @throws NotAuthorizedException
+     * @throws BadRequestException 
+     */
+    public synchronized List<PropFindResponse> propFind(Path path, int depth, List<QName> fields) throws IOException, com.ettrema.httpclient.HttpException, NotAuthorizedException, BadRequestException {
+        Path base = Path.path(rootPath);
+        Path p = base.add(path);
+        String url = buildEncodedUrl(p);
+        return _doPropFind(url, depth, fields);
     }
 
     /**
      *
-     * @param url - the encuded URL to query
+     * @param url - the encoded absolute URL to query. This method does not apply basePath
      * @param depth - depth to generate responses for. Zero means only the
      * specified url, 1 means it and its direct children, etc
      * @return
      * @throws IOException
      * @throws com.ettrema.httpclient.HttpException
      */
-    public synchronized List<PropFindMethod.Response> doPropFind(String url, int depth) throws IOException, com.ettrema.httpclient.HttpException, NotAuthorizedException, BadRequestException {
+    public synchronized List<PropFindResponse> _doPropFind(String url, final int depth, List<QName> fields) throws IOException, com.ettrema.httpclient.HttpException, NotAuthorizedException, BadRequestException {
         log.trace("doPropFind: " + url);
         notifyStartRequest();
         final PropFindMethod m = new PropFindMethod(url);
         m.addHeader("Depth", depth + "");
 
         try {
-            if (propFindXml != null) {
+            if (fields != null) {
+                String propFindXml = buildPropFindXml(fields);
                 HttpEntity requestEntity = new StringEntity(propFindXml, "UTF-8");
                 m.setEntity(requestEntity);
             }
 
-            final List<PropFindMethod.Response> responses = new ArrayList<PropFindMethod.Response>();
+            final ByteArrayOutputStream bout = new ByteArrayOutputStream();
+            final List<PropFindResponse> responses = new ArrayList<PropFindResponse>();
             ResponseHandler<Integer> respHandler = new ResponseHandler<Integer>() {
 
                 @Override
                 public Integer handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
+                    Header serverDateHeader = response.getFirstHeader("Date");
                     if (response.getStatusLine().getStatusCode() == 207) {
-                        m.buildResponses(response, responses);
+                        HttpEntity entity = response.getEntity();
+                        if (entity != null) {
+                            entity.writeTo(bout);
+                            ByteArrayInputStream bin = new ByteArrayInputStream(bout.toByteArray());
+                            Document document = getResponseAsDocument(bin);
+                            String sServerDate = null;
+                            if (serverDateHeader != null) {
+                                sServerDate = serverDateHeader.getValue();
+                            }
+                            Date serverDate = null;
+                            if (sServerDate != null && sServerDate.length() > 0) {
+                                try {
+                                    serverDate = DateUtils.parseWebDavDate(sServerDate);
+                                } catch (DateParseException ex) {
+                                    log.warn("Couldnt parse date header: " + sServerDate);
+                                }
+                            }
+                            
+                            buildResponses(document, serverDate, responses, depth);
+
+                        }
                     }
                     return response.getStatusLine().getStatusCode();
                 }
@@ -467,11 +564,41 @@ public class Host extends Folder {
             throw new RuntimeException(ex);
         } catch (NotFoundException e) {
             log.trace("not found: " + url);
-            return Collections.EMPTY_LIST;
+            return null;
         } catch (HttpException ex) {
             throw new RuntimeException(ex);
         } finally {
             notifyFinishRequest();
+        }
+    }
+
+    /**
+     *
+     * @return - child responses only, not the requested url
+     */
+    public void buildResponses(Document document, Date serverDate, List<PropFindResponse> responses, int depth) {
+        Element root = document.getRootElement();
+        List<Element> responseEls = RespUtils.getElements(root, "response");
+        boolean isFirst = true;
+        for (Element el : responseEls) {
+            if (!isFirst || depth == 0) { // if depth=0 must return first and only result
+                PropFindResponse resp = new PropFindResponse(serverDate, el);
+                responses.add(resp);
+            } else {
+                isFirst = false;
+            }
+        }
+
+    }
+
+    public Document getResponseAsDocument(InputStream in) throws IOException {
+//        IOUtils.copy( in, out );
+//        String xml = out.toString();
+        try {
+            Document document = RespUtils.getJDomDocument(in);
+            return document;
+        } catch (JDOMException ex) {
+            throw new RuntimeException(ex);
         }
     }
 
@@ -539,7 +666,7 @@ public class Host extends Folder {
 
     }
 
-    public synchronized void doGet(Path path, final OutputStream out, Map<String, String> queryParams) throws IOException, NotFoundException, com.ettrema.httpclient.HttpException, CancelledException, NotAuthorizedException, BadRequestException, ConflictException {        
+    public synchronized void doGet(Path path, final OutputStream out, Map<String, String> queryParams) throws IOException, NotFoundException, com.ettrema.httpclient.HttpException, CancelledException, NotAuthorizedException, BadRequestException, ConflictException {
         String url = this.buildEncodedUrl(path);
         LogUtils.trace(log, "doGet", url);
         if (queryParams != null && queryParams.size() > 0) {
@@ -600,9 +727,44 @@ public class Host extends Folder {
     }
 
     /**
+     * GET the contents of the given path. The path is non-encoded, and it relative
+     * to the host's root.
+     * 
+     * @param path
+     * @return
+     * @throws com.ettrema.httpclient.HttpException
+     * @throws NotAuthorizedException
+     * @throws BadRequestException
+     * @throws ConflictException
+     * @throws NotFoundException 
+     */
+    public synchronized byte[] get(Path path) throws com.ettrema.httpclient.HttpException, NotAuthorizedException, BadRequestException, ConflictException, NotFoundException {
+        Path root = Path.path(rootPath);
+        Path p = root.add(path);
+        String url = buildEncodedUrl(p);
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            transferService.get(url, new StreamReceiver() {
+
+                @Override
+                public void receive(InputStream in) {
+                    try {
+                        IOUtils.copy(in, out);
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            }, null, null);
+        } catch (CancelledException ex) {
+            throw new RuntimeException("Should never happen because no progress listener is set", ex);
+        }
+        return out.toByteArray();        
+    }
+    
+    /**
      * Retrieve the bytes at the specified path.
      *
-     * @param path - encoded but not fully qualified. Must NOT be slash prefixed
+     * @param path - encoded and relative to host's rootPath. Must NOT be slash prefixed
      * as it will be appended to the host's url
      * @return
      * @throws com.ettrema.httpclient.HttpException
@@ -752,13 +914,6 @@ public class Host extends Folder {
         return href(); // for a Host, there are no un-encoded components (eg rootPath, if present, must be encoded)
     }
 
-    public String getPropFindXml() {
-        return propFindXml;
-    }
-
-    public void setPropFindXml(String propFindXml) {
-        this.propFindXml = propFindXml;
-    }
 
     public com.ettrema.httpclient.Folder getOrCreateFolder(Path remoteParentPath, boolean create) throws com.ettrema.httpclient.HttpException, IOException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         log.trace("getOrCreateFolder: {}", remoteParentPath);
@@ -844,6 +999,36 @@ public class Host extends Folder {
         return client;
     }
 
+    /**
+     * TODO: should optimise so it only generates once per set of fields
+     * 
+     * @param fields
+     * @return 
+     */
+    private String buildPropFindXml(List<QName> fields) {
+        try {
+            if( fields == null ) {
+                fields = defaultFields;
+            }
+            Element elPropfind = new Element("propfind", RespUtils.NS_DAV);
+            Document doc = new Document(elPropfind);        
+            Element elProp = new Element("prop", RespUtils.NS_DAV);
+            elPropfind.addContent(elProp);
+            for( QName qn : fields ) {
+                Element elName = new Element(qn.getLocalPart(), qn.getPrefix(), qn.getNamespaceURI());
+                elProp.addContent(elName);
+            }
+            XMLOutputter outputter = new XMLOutputter();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            outputter.output(doc, out);
+            return out.toString("UTF-8");
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+    
+            
+            
     static class PreemptiveAuthInterceptor implements HttpRequestInterceptor {
 
         @Override
@@ -876,7 +1061,7 @@ public class Host extends Folder {
             return false;
         }
     }
-    
+
     static class MyDefaultHttpClient extends DefaultHttpClient {
 
         @Override
@@ -889,8 +1074,5 @@ public class Host extends Folder {
             RequestDirector rd = super.createClientRequestDirector(requestExec, conman, reustrat, kastrat, rouplan, httpProcessor, retryHandler, redirectStrategy, targetAuthHandler, proxyAuthHandler, stateHandler, params);
             return rd;
         }
-        
-        
-        
     }
 }

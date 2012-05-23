@@ -7,9 +7,11 @@ import com.bradmcevoy.http.exceptions.NotFoundException;
 import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -38,6 +40,11 @@ public class Utils {
      * 
      */
     public static int executeHttpWithStatus(HttpClient client, HttpUriRequest m, OutputStream out) throws IOException {
+        HttpResult result = executeHttpWithResult(client, m, out);
+        return result.getStatusCode();
+    }
+    
+    public static HttpResult executeHttpWithResult(HttpClient client, HttpUriRequest m, OutputStream out) throws IOException {
         HttpResponse resp = client.execute(m);
         HttpEntity entity = resp.getEntity();
         if( entity != null ) {
@@ -51,8 +58,13 @@ public class Utils {
                 IOUtils.closeQuietly(in);
             }
         }
-        return resp.getStatusLine().getStatusCode();
-    }
+        Map<String,String> mapOfHeaders = new HashMap<String, String>();
+        for( Header h : resp.getAllHeaders( )) {
+            mapOfHeaders.put(h.getName(), h.getValue()); // TODO: should concatenate multi-valued headers
+        }
+        HttpResult result = new HttpResult(resp.getStatusLine().getStatusCode(), mapOfHeaders);
+        return result;
+    }    
     
     public static void close(InputStream in) {
         try {

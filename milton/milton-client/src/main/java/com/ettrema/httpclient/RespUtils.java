@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import javax.xml.namespace.QName;
 import org.apache.commons.io.IOUtils;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -27,6 +28,11 @@ public class RespUtils {
     private static final Logger log = LoggerFactory.getLogger( RespUtils.class );
     
     public static Namespace NS_DAV = Namespace.getNamespace("D", "DAV:");
+    
+    public static QName davName(String localName) {
+        return new QName(NS_DAV.getURI(), localName, NS_DAV.getPrefix());
+    }    
+    
     
     public static String asString( Element el, String name ) {
         Element elChild = el.getChild( name, NS_DAV  );

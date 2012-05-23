@@ -7,7 +7,6 @@ import com.bradmcevoy.http.exceptions.NotAuthorizedException;
 import com.bradmcevoy.http.exceptions.NotFoundException;
 import com.ettrema.cache.Cache;
 import com.ettrema.common.LogUtils;
-import com.ettrema.httpclient.PropFindMethod.Response;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -17,7 +16,6 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +40,7 @@ public class Folder extends Resource {
         }
     }
 
-    public Folder(Folder parent, Response resp, Cache<Folder, List<Resource>> cache) {
+    public Folder(Folder parent, PropFindResponse resp, Cache<Folder, List<Resource>> cache) {
         super(parent, resp);
         this.cache = cache;
         if (this.cache == null) {
@@ -73,7 +71,7 @@ public class Folder extends Resource {
      * @return
      * @throws HttpException
      */
-    public String post(String relativePath, Map<String, String> params) throws HttpException , NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
+    public String post(String relativePath, Map<String, String> params) throws HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         return host().doPost(encodedUrl() + relativePath, params);
     }
 
@@ -96,15 +94,15 @@ public class Folder extends Resource {
         cache.remove(this);
     }
 
-    public boolean hasChildren() throws IOException, HttpException , NotAuthorizedException, BadRequestException {
+    public boolean hasChildren() throws IOException, HttpException, NotAuthorizedException, BadRequestException {
         return !children().isEmpty();
     }
 
-    public int numChildren() throws IOException, HttpException , NotAuthorizedException, BadRequestException {
+    public int numChildren() throws IOException, HttpException, NotAuthorizedException, BadRequestException {
         return children().size();
     }
 
-    public List<? extends Resource> children() throws IOException, HttpException , NotAuthorizedException, BadRequestException {
+    public List<? extends Resource> children() throws IOException, HttpException, NotAuthorizedException, BadRequestException {
         List<Resource> children = cache.get(this);
         if (children == null) {
             children = new ArrayList<Resource>();
@@ -112,20 +110,19 @@ public class Folder extends Resource {
             if (log.isTraceEnabled()) {
                 log.trace("load children for: " + thisHref);
             }
-            List<Response> responses = host().doPropFind(encodedUrl(), 1);
+            List<PropFindResponse> responses = host()._doPropFind(encodedUrl(), 1, null);
             if (responses != null) {
-                for (Response resp : responses) {
-                    if (!resp.href.equals(this.href())) {
-                        try {
-                            Resource r = Resource.fromResponse(this, resp, cache);
-                            if (!r.href().equals(thisHref)) {
-                                children.add(r);
-                            }
-                            this.notifyOnChildAdded(r);
-                        } catch (Exception e) {
-                            log.error("couldnt process record", e);
+                for (PropFindResponse resp : responses) {
+                    try {
+                        Resource r = Resource.fromResponse(this, resp, cache);
+                        if (!r.href().equals(thisHref)) {
+                            children.add(r);
                         }
+                        this.notifyOnChildAdded(r);
+                    } catch (Exception e) {
+                        log.error("couldnt process record", e);
                     }
+
                 }
             } else {
                 log.trace("null responses");
@@ -156,7 +153,7 @@ public class Folder extends Resource {
         return href() + " (is a folder)";
     }
 
-    public void upload(File f) throws IOException, HttpException , NotAuthorizedException, ConflictException, BadRequestException, FileNotFoundException, NotFoundException {
+    public void upload(File f) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, FileNotFoundException, NotFoundException {
         upload(f, null);
     }
 
@@ -167,7 +164,7 @@ public class Folder extends Resource {
      * @param throttle - optional, can be used to slow down the transfer
      * @throws IOException
      */
-    public void upload(File f, ProgressListener listener) throws IOException, HttpException , NotAuthorizedException, ConflictException, BadRequestException, FileNotFoundException, NotFoundException {
+    public void upload(File f, ProgressListener listener) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, FileNotFoundException, NotFoundException {
         if (f.isDirectory()) {
             uploadFolder(f, listener);
         } else {
@@ -175,7 +172,7 @@ public class Folder extends Resource {
         }
     }
 
-    public com.ettrema.httpclient.File uploadFile(File f) throws FileNotFoundException, IOException, HttpException , NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
+    public com.ettrema.httpclient.File uploadFile(File f) throws FileNotFoundException, IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         return uploadFile(f, null);
     }
 
@@ -196,7 +193,8 @@ public class Folder extends Resource {
     public com.ettrema.httpclient.File uploadFile(String newName, File f, ProgressListener listener) throws FileNotFoundException, IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         Path newPath = path().child(newName);
         children(); // ensure children are loaded
-        int resultCode = host().doPut(newPath, f, listener);
+        HttpResult result = host().doPut(newPath, f, listener);
+        int resultCode = result.getStatusCode();
         LogUtils.trace(log, "uploadFile", newPath, " result", resultCode);
         Utils.processResultCode(resultCode, newPath.toString());
         com.ettrema.httpclient.File child = new com.ettrema.httpclient.File(this, newName, null, f.length());
@@ -215,7 +213,7 @@ public class Folder extends Resource {
         }
     }
 
-    public com.ettrema.httpclient.File upload(String name, InputStream content, Integer contentLength, ProgressListener listener) throws IOException, HttpException , NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
+    public com.ettrema.httpclient.File upload(String name, InputStream content, Integer contentLength, ProgressListener listener) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         Long length = null;
         if (contentLength != null) {
             long l = contentLength;
@@ -228,13 +226,14 @@ public class Folder extends Resource {
         String contentType = URLConnection.guessContentTypeFromName(name);
         return upload(name, content, contentLength, contentType, listener);
     }
-    
-    public com.ettrema.httpclient.File upload(String name, InputStream content, Long contentLength,String contentType, ProgressListener listener) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
+
+    public com.ettrema.httpclient.File upload(String name, InputStream content, Long contentLength, String contentType, ProgressListener listener) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         children(); // ensure children are loaded
-        String newUri = encodedUrl() + com.bradmcevoy.http.Utils.percentEncode(name);        
+        String newUri = encodedUrl() + com.bradmcevoy.http.Utils.percentEncode(name);
         log.trace("upload: " + newUri);
-        int result = host().doPut(newUri, content, contentLength, contentType, listener);
-        Utils.processResultCode(result, newUri);
+        HttpResult result = host().doPut(newUri, content, contentLength, contentType, listener);
+        int resultCode = result.getStatusCode();
+        Utils.processResultCode(resultCode, newUri);
         com.ettrema.httpclient.File child = new com.ettrema.httpclient.File(this, name, contentType, contentLength);
         com.ettrema.httpclient.Resource oldChild = this.child(child.name);
         flush();
@@ -242,7 +241,7 @@ public class Folder extends Resource {
         return child;
     }
 
-    public Folder createFolder(String name) throws IOException, HttpException , NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
+    public Folder createFolder(String name) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         children(); // ensure children are loaded
         String newUri = encodedUrl() + com.bradmcevoy.http.Utils.percentEncode(name);
         try {
@@ -305,7 +304,7 @@ public class Folder extends Resource {
             l.onChildRemoved(this, child);
         }
         // the list of children in the cache for this folder is no longer valid, so flush it
-        cache.remove(this); 
+        cache.remove(this);
     }
 
     @Override

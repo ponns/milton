@@ -75,7 +75,7 @@ public class TransferService {
         }
     }
 
-    public int put(String encodedUrl, InputStream content, Long contentLength, String contentType, ProgressListener listener) {
+    public HttpResult put(String encodedUrl, InputStream content, Long contentLength, String contentType, ProgressListener listener) {
         LogUtils.trace(log, "put: ", encodedUrl);
         notifyStartRequest();
         String s = encodedUrl;
@@ -91,8 +91,7 @@ public class TransferService {
                 requestEntity = new InputStreamEntity(notifyingIn, contentLength);
             }
             p.setEntity(requestEntity);
-            int result = Utils.executeHttpWithStatus(client, p, null);
-            return result;
+            return Utils.executeHttpWithResult(client, p, null);
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         } finally {

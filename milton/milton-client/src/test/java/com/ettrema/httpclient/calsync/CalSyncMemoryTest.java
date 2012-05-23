@@ -28,7 +28,7 @@ import junit.framework.TestCase;
  *
  * @author brad
  */
-public class CalSyncTest extends TestCase{
+public class CalSyncMemoryTest extends TestCase{
 
         MemoryCalendarStore localStore;
         MemoryCalendarStore remoteStore;

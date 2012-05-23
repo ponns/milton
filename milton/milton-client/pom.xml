@@ -82,6 +82,17 @@
             <type>jar</type>
             <version>2.0.2</version>
         </dependency>
+        <dependency>
+            <groupId>com.ettrema</groupId>
+            <artifactId>endrick-jdbc</artifactId>
+            <version>1.7.8</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>jcs</artifactId>
+                    <groupId>jcs</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>        
     </dependencies>
 </project>
 

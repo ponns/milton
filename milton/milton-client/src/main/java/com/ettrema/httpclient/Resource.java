@@ -1,14 +1,11 @@
 package com.ettrema.httpclient;
 
 import com.bradmcevoy.common.Path;
-import com.bradmcevoy.http.DateUtils;
-import com.bradmcevoy.http.DateUtils.DateParseException;
 import com.bradmcevoy.http.exceptions.BadRequestException;
 import com.bradmcevoy.http.exceptions.ConflictException;
 import com.bradmcevoy.http.exceptions.NotAuthorizedException;
 import com.bradmcevoy.http.exceptions.NotFoundException;
 import com.ettrema.cache.Cache;
-import com.ettrema.httpclient.PropFindMethod.Response;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -17,8 +14,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,8 +25,8 @@ public abstract class Resource {
 
     private static final Logger log = LoggerFactory.getLogger(Resource.class);
 
-    static Resource fromResponse(Folder parent, Response resp, Cache<Folder, List<Resource>> cache) {
-        if (resp.isCollection) {
+    static Resource fromResponse(Folder parent, PropFindResponse resp, Cache<Folder, List<Resource>> cache) {
+        if (resp.isCollection()) {
             return new Folder(parent, resp, cache);
         } else {
             return new com.ettrema.httpclient.File(parent, resp);
@@ -71,15 +66,11 @@ public abstract class Resource {
     public String displayName;
     private Date modifiedDate;
     private Date createdDate;
-    private final Long quotaAvailableBytes;
-    private final Long quotaUsedBytes;
-    private final Long crc;
     final List<ResourceListener> listeners = new ArrayList<ResourceListener>();
     private String lockOwner;
     private String lockToken;
 
     public abstract java.io.File downloadTo(java.io.File destFolder, ProgressListener listener) throws FileNotFoundException, IOException, HttpException, Utils.CancelledException, NotAuthorizedException, BadRequestException;
-    
     private static long count = 0;
 
     public static long getCount() {
@@ -97,49 +88,25 @@ public abstract class Resource {
         this.displayName = "";
         this.createdDate = null;
         this.modifiedDate = null;
-        quotaAvailableBytes = null;
-        quotaUsedBytes = null;
-        crc = null;
         count++;
     }
 
-    public Resource(Folder parent, Response resp) {
+    public Resource(Folder parent, PropFindResponse resp) {
         count++;
-        try {
-            if (parent == null) {
-                throw new NullPointerException("parent");
-            }
-            this.parent = parent;
-            name = Resource.decodePath(resp.name);
-            displayName = Resource.decodePath(resp.displayName);
-            if (resp.createdDate != null && resp.createdDate.length() > 0) {
-                createdDate = DateUtils.parseWebDavDate(resp.createdDate);
-            }
-            quotaAvailableBytes = resp.quotaAvailableBytes;
-            quotaUsedBytes = resp.quotaUsedBytes;
-            crc = resp.crc;
-
-            if (StringUtils.isEmpty(resp.modifiedDate)) {
-                modifiedDate = null;
-            } else if (resp.modifiedDate.endsWith("Z")) {
-                modifiedDate = DateUtils.parseWebDavDate(resp.modifiedDate);
-                if (resp.serverDate != null) {
-                    // calc difference and use that as delta on local time
-                    Date serverDate = DateUtils.parseDate(resp.serverDate);
-                    long delta = serverDate.getTime() - modifiedDate.getTime();
-                    modifiedDate = new Date(System.currentTimeMillis() - delta);
-                } else {
-                    log.debug("no server date");
-                }
-            } else {
-                modifiedDate = DateUtils.parseDate(resp.modifiedDate);
-            }
-            lockToken = resp.lockToken;
-            lockOwner = resp.lockOwner;
-
-            //log.debug( "parsed mod date: " + modifiedDate);
-        } catch (DateParseException ex) {
-            throw new RuntimeException(ex);
+        if (parent == null) {
+            throw new NullPointerException("parent is null");
+        }
+        this.parent = parent;
+        name = Resource.decodePath(resp.getName());
+        displayName = resp.getDisplayName();
+        createdDate = resp.getCreatedDate();
+        modifiedDate = resp.getModifiedDate();
+        if (resp.getLock() != null) {
+            lockToken = resp.getLock().getToken();
+            lockOwner = resp.getLock().getOwner();
+        } else {
+            lockToken = null;
+            lockOwner = null;
         }
     }
 
@@ -153,9 +120,6 @@ public abstract class Resource {
         this.displayName = displayName;
         this.modifiedDate = modifiedDate;
         this.createdDate = createdDate;
-        quotaAvailableBytes = null;
-        quotaUsedBytes = null;
-        crc = null;
     }
 
     public Resource(Folder parent, String name) {
@@ -168,9 +132,6 @@ public abstract class Resource {
         this.displayName = name;
         this.modifiedDate = null;
         this.createdDate = null;
-        quotaAvailableBytes = null;
-        quotaUsedBytes = null;
-        crc = null;
     }
 
     @Override
@@ -187,7 +148,7 @@ public abstract class Resource {
         return host().doPost(encodedUrl(), params);
     }
 
-    public void lock() throws HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException  {
+    public void lock() throws HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         if (lockToken != null) {
             log.warn("already locked: " + href() + " token: " + lockToken);
         }
@@ -198,7 +159,7 @@ public abstract class Resource {
         }
     }
 
-    public int unlock() throws HttpException , NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
+    public int unlock() throws HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         if (lockToken == null) {
             throw new IllegalStateException("Can't unlock, is not currently locked (no lock token) - " + href());
         }
@@ -209,11 +170,11 @@ public abstract class Resource {
         }
     }
 
-    public void copyTo(Folder folder) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException  {
+    public void copyTo(Folder folder) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         copyTo(folder, name);
     }
 
-    public void copyTo(Folder folder, String destName) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException  {
+    public void copyTo(Folder folder, String destName) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         try {
             host().doCopy(encodedUrl(), folder.encodedUrl() + com.bradmcevoy.http.Utils.percentEncode(destName));
         } catch (URISyntaxException ex) {
@@ -221,8 +182,8 @@ public abstract class Resource {
         }
         folder.flush();
     }
-    
-    public void rename(String newName) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException  {
+
+    public void rename(String newName) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         String dest = "";
         if (parent != null) {
             dest = parent.encodedUrl();
@@ -239,10 +200,11 @@ public abstract class Resource {
         }
     }
 
-    public void moveTo(Folder folder) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException  {
+    public void moveTo(Folder folder) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         moveTo(folder, name);
     }
-    public void moveTo(Folder folder, String destName) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException  {
+
+    public void moveTo(Folder folder, String destName) throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         log.info("Move: " + this.href() + " to " + folder.href());
         int res;
         try {
@@ -265,7 +227,7 @@ public abstract class Resource {
         return href() + "(" + displayName + ")";
     }
 
-    public void delete() throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException  {
+    public void delete() throws IOException, HttpException, NotAuthorizedException, ConflictException, BadRequestException, NotFoundException {
         host().doDelete(encodedUrl());
         notifyOnDelete();
     }
@@ -323,18 +285,6 @@ public abstract class Resource {
 
     public Date getCreatedDate() {
         return createdDate;
-    }
-
-    public Long getQuotaAvailableBytes() {
-        return quotaAvailableBytes;
-    }
-
-    public Long getQuotaUsedBytes() {
-        return quotaUsedBytes;
-    }
-
-    public Long getCrc() {
-        return crc;
     }
 
     public String getLockToken() {

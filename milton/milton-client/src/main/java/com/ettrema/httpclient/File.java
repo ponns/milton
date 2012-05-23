@@ -26,10 +26,10 @@ public class File extends Resource {
     public final String contentType;
     public final Long contentLength;
 
-    public File(Folder parent, PropFindMethod.Response resp) {
+    public File(Folder parent, PropFindResponse resp) {
         super(parent, resp);
-        this.contentType = resp.contentType;
-        this.contentLength = resp.contentLength;
+        this.contentType = resp.getContentType();
+        this.contentLength = resp.getContentLength();
     }
 
     public File(Folder parent, String name, String contentType, Long contentLength) {
